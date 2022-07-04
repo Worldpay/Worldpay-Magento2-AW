@@ -23,6 +23,15 @@ class Config
     /** @var string $failureURL The URL to redirect the shopper to if the payment fails. */
     private $failureURL;
 
+    /**
+     * Constructor
+     *
+     * @param string $successURL
+     * @param string $cancelURL
+     * @param string $pendingURL
+     * @param string $errorURL
+     * @param string $failureURL
+     */
     public function __construct($successURL, $cancelURL, $pendingURL, $errorURL, $failureURL = null)
     {
 
@@ -50,6 +59,8 @@ class Config
     }
 
     /**
+     * Get SuccessURL
+     *
      * @return string
      */
     public function getSuccessURL()
@@ -58,6 +69,8 @@ class Config
     }
 
     /**
+     * Get Cancel Url
+     *
      * @return string
      */
     public function getCancelURL()
@@ -66,6 +79,8 @@ class Config
     }
 
     /**
+     * Get Pending Url
+     *
      * @return string
      */
     public function getPendingURL()
@@ -74,6 +89,8 @@ class Config
     }
 
     /**
+     * Get Error URL
+     *
      * @return string
      */
     public function getErrorURL()
@@ -82,6 +99,8 @@ class Config
     }
 
     /**
+     * Get Failure URL
+     *
      * @return string
      */
     public function getFailureURL()

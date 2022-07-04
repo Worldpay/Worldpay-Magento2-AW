@@ -31,6 +31,15 @@
                     <authmethods>PAN_ONLY,CRYPTOGRAM_3DS</authmethods>
                 </google_pay_wallets_config>
             </wallets_config>
+            <apm_config>
+                <enabled>0</enabled>
+                <title>Alternative Payment Methods</title>
+            </apm_config> 
+            <wp_error_alerts>
+                <enable_error_alerts>0</enable_error_alerts>
+                <send_email_to_worldpay>0</send_email_to_worldpay>
+                <wp_team_email>adobe@fisglobal.com</wp_team_email>
+            </wp_error_alerts>
         </worldpay>
         <payment>
             <worldpay_cc>
@@ -56,14 +65,23 @@
                     <additionalInformation>Sapient\AccessWorldpay\Model\InstantPurchase\PaymentAdditionalInformationProvider</additionalInformation>
                 </instant_purchase>
                 <can_use_for_worldpay_subscription>0</can_use_for_worldpay_subscription>
-            </worldpay_cc_vault> 
+            </worldpay_cc_vault>
+             <worldpay_apm>
+                <title>Alternative Payment methods</title>
+                <model>Sapient\AccessWorldpay\Model\PaymentMethods\AlternativePaymentMethods</model>
+                <active>1</active>
+                <allow_specific>0</allow_specific>
+                <payment_action>authorize</payment_action>
+                <sort_order>11</sort_order>
+                <can_use_for_worldpay_subscription>0</can_use_for_worldpay_subscription>
+            </worldpay_apm>
             <worldpay_wallets>
                 <title>Wallets</title>
                 <model>Sapient\AccessWorldpay\Model\PaymentMethods\Wallets</model>
                 <active>1</active>
                 <allow_specific>0</allow_specific>
                 <payment_action>authorize</payment_action>
-                <sort_order>4</sort_order>
+                <sort_order>11</sort_order>
             </worldpay_wallets>
         </payment>
         

@@ -8,6 +8,12 @@ use Sapient\AccessWorldpay\Logger\AccessWorldpayLogger;
 class PaymentAdditionalInformationProvider implements PaymentAdditionalInformationProviderInterface
 {
 
+    /**
+     * PaymentAdditionalInformationProvider constructor
+     *
+     * @param AccessWorldpayLogger $logger
+     * @param \Magento\Checkout\Model\Session $checkoutSession
+     */
     public function __construct(
         AccessWorldpayLogger $logger,
         \Magento\Checkout\Model\Session $checkoutSession

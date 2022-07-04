@@ -12,7 +12,7 @@
                    event: {change : $parent.isSavedCardSelected},
                    attr: {id: 'saved_card_' + id,
                    'data-validate': JSON.stringify({'required':true})}
-                   "/>
+                   "></input>
                 <label class="card__field--label" for="wp_save_card" data-bind='attr: {for: "saved_card_" + id}'>
                 <!--ko if: $parent.getIcons(card_brand+'-SSL') -->
                         <img data-bind="attr: {
@@ -27,7 +27,7 @@
             </div>
        </div>
     <!--/ko-->
-    
+</div>
         <div class="container-cvv">
             <section class="container">
                 <section class="card cvv">
@@ -51,5 +51,4 @@
                 </section>
             </section>
         </div>
-    <!-- /ko -->
-</div>
+

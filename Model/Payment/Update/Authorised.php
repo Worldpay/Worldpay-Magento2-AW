@@ -4,23 +4,26 @@
  */
 namespace Sapient\AccessWorldpay\Model\Payment\Update;
 
-use Sapient\AccessWorldpay\Model\Payment\State;
+use Sapient\AccessWorldpay\Model\Payment\StateInterface;
 use Sapient\AccessWorldpay\Model\Payment\Update\Base;
-use Sapient\AccessWorldpay\Model\Payment\Update;
+use Sapient\AccessWorldpay\Model\Payment\UpdateInterface;
 
-class Authorised extends Base implements Update
+class Authorised extends Base implements UpdateInterface
 {
-    /** @var \Sapient\AccessWorldpay\Helper\Data */
+    /**
+     * @var $_configHelper
+     */
     private $_configHelper;
 
     /**
      * Constructor
-     * @param \Sapient\AccessWorldpay\Model\Payment\State $paymentState
+     *
+     * @param \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState
      * @param \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment
      * @param \Sapient\AccessWorldpay\Helper\Data $configHelper
      */
     public function __construct(
-        \Sapient\AccessWorldpay\Model\Payment\State $paymentState,
+        \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState,
         \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment,
         \Sapient\AccessWorldpay\Helper\Data $configHelper
     ) {
@@ -30,8 +33,11 @@ class Authorised extends Base implements Update
     }
 
     /**
-     * @param $payment
-     * @param $order
+     * Apply update payment status
+     *
+     * @param array $payment
+     * @param array $order
+     * @return string
      */
     public function apply($payment, $order = null)
     {
@@ -45,12 +51,19 @@ class Authorised extends Base implements Update
         }
     }
 
+    /**
+     * Apply update payment
+     *
+     * @param array $payment
+     * @param array $order
+     */
     private function _applyUpdate($payment, $order = null)
     {
         $payment->setTransactionId(time());
         $payment->setIsTransactionClosed(0);
-        if (!empty($order)
-            && ($order->getPaymentStatus() == State::STATUS_SENT_FOR_AUTHORISATION)) {
+        if (!empty($order) &&
+            ($order->getPaymentStatus() == \Sapient\AccessWorldpay\Model\Payment\StateInterface::
+                STATUS_SENT_FOR_AUTHORISATION)) {
             //$currencycode = $this->_paymentState->getCurrency();
             //$currencysymbol = $this->_configHelper->getCurrencySymbol($currencycode);
             //$amount = $this->_amountAsInt($this->_paymentState->getAmount());
@@ -63,6 +76,8 @@ class Authorised extends Base implements Update
     }
 
     /**
+     * Get Allowed Payment Status
+     *
      * @param \Sapient\AccessWorldpay\Model\Order $order
      * @return array
      */
@@ -71,18 +86,20 @@ class Authorised extends Base implements Update
         if (!empty($order) && $order->hasWorldPayPayment()) {
             if ($this->_isDirectIntegrationMode($order)) {
                  return [
-                \Sapient\AccessWorldpay\Model\Payment\State::STATUS_SENT_FOR_AUTHORISATION,
-                \Sapient\AccessWorldpay\Model\Payment\State::STATUS_AUTHORISED
+                \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_SENT_FOR_AUTHORISATION,
+                \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_AUTHORISED
                  ];
             }
-            return [\Sapient\AccessWorldpay\Model\Payment\State::STATUS_SENT_FOR_AUTHORISATION];
+            return [\Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_SENT_FOR_AUTHORISATION];
         } else {
             throw new \Magento\Framework\Exception\LocalizedException(__('No Payment'));
         }
     }
 
     /**
-     * check if integration mode is direct
+     * Check if integration mode is direct
+     *
+     * @param array $order
      * @return bool
      */
     private function _isDirectIntegrationMode(\Sapient\AccessWorldpay\Model\Order $order)
@@ -95,7 +112,9 @@ class Authorised extends Base implements Update
     }
 
     /**
-     * check if integration mode is redirect
+     * Check if integration mode is redirect
+     *
+     * @param object $order
      * @return bool
      */
     private function _isRedirectIntegrationMode(\Sapient\AccessWorldpay\Model\Order $order)

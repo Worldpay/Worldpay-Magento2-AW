@@ -9,14 +9,20 @@ namespace Sapient\AccessWorldpay\Model\Payment;
  */
 class WorldPayPayment
 {
-
+    /**
+     * @var object $omsDataFactory
+     */
     protected $omsDataFactory;
-    
+    /**
+     * @var object $partialSettlementsFactory
+     */
     protected $partialSettlementsFactory;
     /**
      * Constructor
      *
      * @param \Sapient\AccessWorldpay\Model\AccessWorldpaymentFactory $worldpaypayment
+     * @param \Sapient\AccessWorldpay\Model\OmsDataFactory $omsDataFactory
+     * @param \Sapient\AccessWorldpay\Model\PartialSettlementsFactory $partialSettlementsFactory
      */
     public function __construct(
         \Sapient\AccessWorldpay\Model\AccessWorldpaymentFactory $worldpaypayment,
@@ -31,12 +37,11 @@ class WorldPayPayment
     /**
      * Updating Risk gardian
      *
-     * @param \Sapient\AccessWorldpay\Model\Payment\State $paymentState
+     * @param \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState
      */
-    public function updateAccessWorldpayPayment(\Sapient\AccessWorldpay\Model\Payment\State $paymentState)
+    public function updateAccessWorldpayPayment(\Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState)
     {
-                 
-         $wpp = $this->worldpaypayment->create();
+        $wpp = $this->worldpaypayment->create();
 
         $wpp = $wpp->loadByAccessWorldpayOrderId($paymentState->getOrderCode());
         if (strtoupper($paymentState->getPaymentStatus()) !== "UNKNOWN") {
@@ -62,10 +67,13 @@ class WorldPayPayment
         $wpp->save();
         $this->saveOmsData($paymentState);
     }
-    
+    /**
+     * Save worldpay data in DB
+     *
+     * @param  string $paymentState
+     */
     public function saveOmsData($paymentState)
     {
-        
         $orderCode = $paymentState->getOrderCode();
         $oms = $this->omsDataFactory->create();
         $omsData = $oms->getCollection()
@@ -83,16 +91,16 @@ class WorldPayPayment
             $cancelLink = $settleLink = $partialSettleLink = $eventsLink = '';
             //foreach($responseLinks as $key => $link){
             if (isset($responseLinks['cancel'])) {
-                $cancelLink = current($responseLinks['cancel']);
+                $cancelLink = $responseLinks['cancel'][0];
             }
             if (isset($responseLinks['settle'])) {
-                $settleLink = current($responseLinks['settle']);
+                $settleLink = $responseLinks['settle'][0];
             }
             if (isset($responseLinks['partialSettle'])) {
-                $partialSettleLink = current($responseLinks['partialSettle']);
+                $partialSettleLink =  $responseLinks['partialSettle'][0];
             }
             if (isset($responseLinks['events'])) {
-                $eventsLink = current($responseLinks['events']);
+                $eventsLink = $responseLinks['events'][0];
             }
             //}
             //$orderCode = $paymentState->getOrderCode();

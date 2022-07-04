@@ -7,7 +7,7 @@
             <block class="Magento\Framework\View\Element\Messages" name="messages" as="messages" template="Magento_Theme::messages.phtml"/>
         </referenceContainer>
          <referenceContainer name="content">
-            <block class="Sapient\AccessWorldpay\Block\Edit" name="savedcardupdate" template="Sapient_AccessWorldpay::savedcardupdate.phtml"  cacheable="false"/>
+            <block class="Sapient\AccessWorldpay\Block\Edit" name="savedcardupdate" template="Sapient_AccessWorldpay::savedcardupdate.phtml" />
         </referenceContainer>
     </body>
 </page>

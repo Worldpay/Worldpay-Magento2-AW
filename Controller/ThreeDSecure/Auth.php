@@ -6,20 +6,42 @@ namespace Sapient\AccessWorldpay\Controller\ThreeDSecure;
 
 use Magento\Framework\App\Action\Context;
 use Exception;
+use \Magento\Framework\Controller\ResultFactory;
 
 class Auth extends \Magento\Framework\App\Action\Action
 {
     /**
+     * @var request
+     */
+    protected $request;
+    /**
      * @var \Magento\Checkout\Model\Session
      */
     protected $checkoutSession;
+    /**
+     * @var $cookieManager
+     */
+    protected $_cookieManager;
+    /**
+     * @var $cookieMetadataFactory
+     */
+    protected $cookieMetadataFactory;
+
     /**
      * Constructor
      *
      * @param \Magento\Framework\App\Action\Context $context
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
      * @param \Magento\Framework\View\Result\PageFactory $resultPageFactory
+     * @param \Sapient\AccessWorldpay\Model\Authorisation\ThreeDSecureService $threeDservice
      * @param \Magento\Checkout\Model\Session $checkoutSession
+     * @param \Sapient\AccessWorldpay\Model\Authorisation\ThreeDSecureChallenge $threeDchallengeService
+     * @param \Sapient\AccessWorldpay\Helper\Data $helper
+     * @param \Magento\Framework\View\Asset\Repository $assetRepo
+     * @param \Magento\Framework\App\Request\Http $request
+     * @param \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager
+     * @param \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory
+     * @param ResultFactory $resultFactory
      */
     public function __construct(
         Context $context,
@@ -29,7 +51,11 @@ class Auth extends \Magento\Framework\App\Action\Action
         \Magento\Checkout\Model\Session $checkoutSession,
         \Sapient\AccessWorldpay\Model\Authorisation\ThreeDSecureChallenge $threeDchallengeService,
         \Sapient\AccessWorldpay\Helper\Data $helper,
-        \Magento\Framework\View\Asset\Repository $assetRepo
+        \Magento\Framework\View\Asset\Repository $assetRepo,
+        \Magento\Framework\App\Request\Http $request,
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager,
+        \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory,
+        ResultFactory $resultFactory
     ) {
         $this->wplogger = $wplogger;
         $this->checkoutSession = $checkoutSession;
@@ -38,12 +64,17 @@ class Auth extends \Magento\Framework\App\Action\Action
         $this->_assetRepo = $assetRepo;
         $this->threeDchallengeService = $threeDchallengeService;
         $this->helper = $helper;
+        $this->request = $request;
+        $this->_cookieManager = $cookieManager;
+        $this->cookieMetadataFactory = $cookieMetadataFactory;
+        $this->resultFactory = $resultFactory;
         parent::__construct($context);
     }
 
     /**
      * Renders the 3D Secure  page, responsible for forwarding
-     * all necessary order data to worldpay.
+     *
+     * All necessary order data to worldpay.
      */
     public function execute()
     {
@@ -56,7 +87,9 @@ class Auth extends \Magento\Framework\App\Action\Action
             $authenticationurl = isset($threeDparams['_links']['3ds:authenticate']['href'])?
                     $threeDparams['_links']['3ds:authenticate']['href']:'';
          // Chrome 84 releted updates for 3DS
-            $phpsessId = $_COOKIE['PHPSESSID'];
+            $mhost = $this->request->getHttpHost();
+            $cookieValue = $this->_cookieManager->getCookie('PHPSESSID');
+            /*$phpsessId = $_COOKIE['PHPSESSID'];
             if (phpversion() < '7.3.0') {
                 setcookie("PHPSESSID", $phpsessId, time() + 3600, "/; SameSite=None; Secure;");
             } else {
@@ -69,28 +102,57 @@ class Auth extends \Magento\Framework\App\Action\Action
                 'httponly' => true,
                 'samesite' => 'None',
                 ]);
+            }*/
+            if (isset($cookieValue)) {
+                $phpsessId = $cookieValue;
+                $domain = $mhost;
+                $expires = time() + 3600;
+                $metadata = $this->cookieMetadataFactory->createPublicCookieMetadata();
+                $metadata->setPath('/');
+                $metadata->setDomain($domain);
+                $metadata->setDuration($expires);
+                $metadata->setSecure(true);
+                $metadata->setHttpOnly(true);
+                $metadata->setSameSite('None');
+                $this->_cookieManager->setPublicCookie(
+                    "PHPSESSID",
+                    $phpsessId,
+                    $metadata
+                );
             }
             if (isset($threeDSecureChallengeConfig['challengeWindowType'])
                 && $threeDSecureChallengeConfig['challengeWindowType'] == 'iframe') {
                   $iframe = true;
             }
-            if ($authenticationurl != null) {
-                $this->threeDservice->authenticate3Ddata($authenticationurl, $directOrderParams);
-                $this->checkoutSession->unsDdcJwt();
-                $this->checkoutSession->uns3Dsparams();
-                $this->checkoutSession->uns3DS2Config();
-                $threeDsChallengeData = $this->checkoutSession->get3DschallengeData();
+            if ($authenticationurl != null && !empty($authenticationurl)) {
+                $exemptionOutcome = isset($directOrderParams['paymentDetails']['exemptionResult'])?
+                        $directOrderParams['paymentDetails']['exemptionResult']:null;
+                $authenticationRequired = (isset($exemptionOutcome) && ($exemptionOutcome['outcome'] === 'exemption'
+                    && $exemptionOutcome['exemption']['placement'] == 'authorization'))? false : true;
+                
+                if ($authenticationRequired) {
+                    $this->threeDservice->authenticate3Ddata($authenticationurl, $directOrderParams);
+                    $this->checkoutSession->unsDdcJwt();
+                    $this->checkoutSession->uns3Dsparams();
+                    $this->checkoutSession->uns3DS2Config();
+                    $threeDsChallengeData = $this->checkoutSession->get3DschallengeData();
+                }
           
-                if ($threeDsChallengeData['outcome'] ==="challenged") {
-                    $this->createChallengeform($threeDsChallengeData, $iframe);
-          
-              //$orderId = $this->checkoutSession->getAuthOrderId();
+                if (isset($threeDsChallengeData) && $threeDsChallengeData['outcome'] ==="challenged") {
+                    $resContent = $this->createChallengeform($threeDsChallengeData, $iframe);
+                    $result = $this->resultFactory->create(ResultFactory::TYPE_RAW);
+                    $result->setHeader('Content-Type', 'text/html');
+                    $result->setContents($resContent);
+                    return $result;
+
+                    //$orderId = $this->checkoutSession->getAuthOrderId();
                 } else {
-                    $message=$this->checkoutSession->getInstantPurchaseMessage();
+                    $threeDsChallengeData = isset($threeDsChallengeData)?$threeDsChallengeData:null;
                     $this->threeDchallengeService->continuePost3dSecure2AuthorizationProcess(
                         $directOrderParams,
                         $threeDsChallengeData
                     );
+                    $message=$this->checkoutSession->getInstantPurchaseMessage();
                     if ($this->checkoutSession->getInstantPurchaseOrder()) {
                           $redirectUrl = $this->checkoutSession->getInstantPurchaseRedirectUrl();
                           $this->checkoutSession->unsInstantPurchaseRedirectUrl();
@@ -114,6 +176,12 @@ class Auth extends \Magento\Framework\App\Action\Action
         }
     }
     
+    /**
+     * Create Challenge form.
+     *
+     * @param string $threeDsChallengeData
+     * @param string $iframe
+     */
     private function createChallengeform($threeDsChallengeData, $iframe)
     {
         $challengeurl = $threeDsChallengeData['challenge']['url'];
@@ -125,7 +193,7 @@ class Auth extends \Magento\Framework\App\Action\Action
             if ($iframe) {
                 $imageurl = $this->_assetRepo->getUrl("Sapient_AccessWorldpay::images/cc/worldpay_logo.png");
                 $challengeUrl = $this->_url->getUrl("worldpay/hostedpaymentpage/challenge");
-                print_r('
+                $resContent = ('
                      
                     <div id="challenge_window">                        
                         <div class="image-content" style="text-align: center;">
@@ -142,8 +210,9 @@ class Auth extends \Magento\Framework\App\Action\Action
                     </script>
                 
                 ');
+                return $resContent;
             } else {
-                print_r(' 
+                $resContent = (' 
                     <form name= "challengeForm" id="challengeForm"
                     method= "POST"
                     action="' . $challengeurl . '" >
@@ -157,21 +226,18 @@ class Auth extends \Magento\Framework\App\Action\Action
                         Extra field for you to pass data in to the challenge that will be included in the post 
                         back to the return URL after challenge complete 
                         -->
-                    </form>');
-                print_r('
+                    </form>
                     <script language="Javascript">
-  
-                     document.getElementById("second_jwt").value = "' . $challengeJwt . '";
-    
-
-    
+                     document.getElementById("second_jwt").value = "' . $challengeJwt . '";    
                          window.onload = function()
                             {
                               // Auto submit form on page load
                               document.getElementById("challengeForm").submit();
                             }
                     </script>');
+                return $resContent;
             }
+            
         }
     }
 }

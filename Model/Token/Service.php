@@ -76,9 +76,7 @@ class Service
     /**
      * Send token inquiry request to WP server and gives back the answer
      *
-     * @param Sapient\Worldpay\Model\Token $tokenModel
-     * @param \Magento\Customer\Model\Customer $customer
-     * @param $storeId
+     * @param SavedToken $tokenModel
      * @return Sapient\Worldpay\Model\Token\InquiryXml
      */
     public function getTokenInquiry(
@@ -89,9 +87,7 @@ class Service
      /**
       * Send token inquiry request to WP server and gives back the answer
       *
-      * @param Sapient\Worldpay\Model\Token $tokenModel
-      * @param \Magento\Customer\Model\Customer $customer
-      * @param $storeId
+      * @param mixed $tokenModelUrl
       * @return Sapient\Worldpay\Model\Token\InquiryXml
       */
     public function getTokenDelete(
@@ -102,9 +98,8 @@ class Service
      /**
       * Send token inquiry request to WP server and gives back the answer
       *
-      * @param Sapient\Worldpay\Model\Token $tokenModel
-      * @param \Magento\Customer\Model\Customer $customer
-      * @param $storeId
+      * @param SavedToken $tokenModel
+      * @param string $cardHolderNameUrl
       * @return Sapient\Worldpay\Model\Token\InquiryXml
       */
     public function putTokenExpiry(
@@ -116,9 +111,8 @@ class Service
      /**
       * Send token inquiry request to WP server and gives back the answer
       *
-      * @param Sapient\Worldpay\Model\Token $tokenModel
-      * @param \Magento\Customer\Model\Customer $customer
-      * @param $storeId
+      * @param SavedToken $tokenModel
+      * @param string $cardHolderNameUrl
       * @return Sapient\Worldpay\Model\Token\InquiryXml
       */
     public function putTokenName(

@@ -24,6 +24,11 @@ class TokenInquiry
      */
     protected $merchantCode;
 
+    /**
+     * Constructor
+     *
+     * @param array $args
+     */
     public function __construct(array $args = [])
     {
         if (isset($args['tokenModel']) && $args['tokenModel'] instanceof \Sapient\AccessWorldPay\Model\SavedToken) {
@@ -41,6 +46,7 @@ class TokenInquiry
 
     /**
      * Build xml for processing Request
+     *
      * @return SimpleXMLElement $xml
      */
     public function build()
@@ -56,15 +62,19 @@ class TokenInquiry
     }
 
     /**
+     * Add inquiry Element
+     *
      * @param SimpleXMLElement $xml
      * @return SimpleXMLElement
      */
     private function _addInquiryElement($xml)
     {
-        return $xml->addChild('inquiry');
+        return $xml->addChild('inquiry'); 
     }
 
     /**
+     * Add tokenInquiry element
+     *
      * @param SimpleXMLElement $inquiry
      * @return SimpleXMLElement $xml
      */

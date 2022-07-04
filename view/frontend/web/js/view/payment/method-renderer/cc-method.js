@@ -138,7 +138,7 @@ define(
         function createJwt(cardNumber){
             var bin = cardNumber;
             var encryptedBin = btoa(bin);
-            fullScreenLoader.startLoader();
+            //fullScreenLoader.startLoader();
             $('body').append('<iframe src="'+jwtUrl+'?instrument='+encryptedBin+'" name="jwt_frm" id="jwt_frm" style="display: none"></iframe>');
         }
         
@@ -741,7 +741,7 @@ define(
                     width: 450,
                     autoOpen: false,
                     modal: true,
-                    position: 'center',
+                    position: { my: "center", at: "center", of: window },
                     draggable: false,
                     buttons: {
                         Agree: function() { 
@@ -765,6 +765,7 @@ define(
                         $(this).parent().appendTo("#disclaimer");
                     }
                 });
+                $('#dialog').parent().css('position', 'absolute');
                 $('#dialog').dialog('open');            
             }
         });

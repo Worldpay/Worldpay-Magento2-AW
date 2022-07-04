@@ -27,9 +27,14 @@ class WorldpayDataProvider implements AdditionalDataProviderInterface
      * @var ArrayManager
      */
     private $arrayManager;
-
+    
     /**
+     * Constructor
+     *
      * @param ArrayManager $arrayManager
+     * @param \Magento\Authorization\Model\CompositeUserContext $userContext
+     * @param \Magento\Framework\Stdlib\DateTime\DateTime $dateTime
+     * @param Data $worldpayHelper
      */
     public function __construct(
         ArrayManager $arrayManager,
@@ -52,7 +57,6 @@ class WorldpayDataProvider implements AdditionalDataProviderInterface
      */
     public function getData(array $data): array
     {
-    
         if (!isset($data[self::PATH_ADDITIONAL_DATA])) {
             throw new GraphQlInputException(
                 __($this->worldpayHelper->getCreditCardSpecificexception('GCCAM0'))
@@ -62,7 +66,8 @@ class WorldpayDataProvider implements AdditionalDataProviderInterface
                 && !empty($data[self::PATH_ADDITIONAL_DATA]['cc_number'])) {
             $exceptionMessage = $this->worldpayHelper->getCreditCardSpecificexception('GCCAM10')?
                     $this->worldpayHelper->getCreditCardSpecificexception('GCCAM10'):
-                'Invalid Data passed for AccessCheckout(WebSDK) integration. Please refer user guide for configuration for WebSDK';
+                'Invalid Data passed for AccessCheckout(WebSDK) integration. 
+                Please refer user guide for configuration for WebSDK';
             throw new GraphQlInputException(
                 __($exceptionMessage)
             );
@@ -144,15 +149,18 @@ class WorldpayDataProvider implements AdditionalDataProviderInterface
              && !empty($data[self::PATH_ADDITIONAL_DATA]['tokenId']))) {
             $data[self::PATH_ADDITIONAL_DATA]['customer_id'] = $this->userContext->getUserId();
         }
-        
 
         $data[self::PATH_ADDITIONAL_DATA]['is_graphql'] = 1;
-
         $additionalData = $this->arrayManager->get(static::PATH_ADDITIONAL_DATA, $data);
         
         return $additionalData;
     }
-
+    /**
+     * Get Card Validation Required
+     *
+     * @param array $data
+     * @return bool
+     */
     public function getIsCardValidationRequired($data)
     {
         if (isset($data[self::PATH_ADDITIONAL_DATA]['tokenId'])
@@ -165,7 +173,12 @@ class WorldpayDataProvider implements AdditionalDataProviderInterface
         }
         return true;
     }
-
+    /**
+     * Data Validation Required
+     *
+     * @param array $data
+     * @return bool
+     */
     public function requiredDataValidation($data)
     {
         if (!isset($data[self::PATH_ADDITIONAL_DATA]['cvcHref'])

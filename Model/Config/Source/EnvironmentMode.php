@@ -7,6 +7,8 @@ namespace Sapient\AccessWorldpay\Model\Config\Source;
 class EnvironmentMode implements \Magento\Framework\Option\ArrayInterface
 {
     /**
+     * ToOptionArray method
+     *
      * @return array
      */
     public function toOptionArray()

@@ -21,10 +21,20 @@ class OrderSyncStatus
      * @var \Magento\Sales\Model\ResourceModel\Order\CollectionFactory
      */
     private $orderCollectionFactory;
+
+    /**
+     * @var $_orderId
+     */
     private $_orderId;
+
+    /**
+     * @var $_order
+     */
     private $_order;
+    /**
+     * @var \Sapient\AccessWorldpay\Model\Payment\Service
+     */
     private $_paymentUpdate;
-    private $_tokenState;
     
     /**
      * Constructor
@@ -35,6 +45,7 @@ class OrderSyncStatus
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayhelper
      * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice
      * @param \Sapient\AccessWorldpay\Model\Order\Service $orderservice
+     * @param \Sapient\AccessWorldpay\Model\PaymentMethods\PaymentOperations $paymentoperations
      */
     public function __construct(
         JsonFactory $resultJsonFactory,
@@ -101,6 +112,8 @@ class OrderSyncStatus
     }
     
     /**
+     * Get Order Collection
+     *
      * @return CollectionFactoryInterface
      */
     private function getOrderCollectionFactory()
@@ -111,13 +124,23 @@ class OrderSyncStatus
         }
         return $this->orderCollectionFactory;
     }
-    
+    /**
+     * Load Order
+     *
+     * @param int $orderId
+     * @return string
+     */
     private function _loadOrder($orderId)
     {
         $this->_orderId = $orderId;
         $this->_order = $this->orderservice->getById($this->_orderId);
     }
     
+    /**
+     * Create Sync Request
+     *
+     * @return bool
+     */
     public function createSyncRequest()
     {
         try {
@@ -135,19 +158,31 @@ class OrderSyncStatus
         }
         return true;
     }
-    
+    /**
+     * Fetch Payment Update
+     *
+     * @return string
+     */
     private function _fetchPaymentUpdate()
     {
         $xml = $this->paymentservice->getPaymentUpdateXmlForOrder($this->_order);
         $this->_paymentUpdate = $this->paymentservice->createPaymentUpdateFromWorldPayXml($xml);
         //$this->_tokenState = new \Sapient\Worldpay\Model\Token\StateXml($xml);
     }
-    
+    /**
+     * Register WorldPay Model
+     *
+     * @return string
+     */
     private function _registerWorldPayModel()
     {
         $this->paymentservice->setGlobalPaymentByPaymentUpdate($this->_paymentUpdate);
     }
-    
+    /**
+     * Apply Payment Update
+     *
+     * @return string
+     */
     private function _applyPaymentUpdate()
     {
         try {
@@ -156,7 +191,11 @@ class OrderSyncStatus
             throw new \Magento\Framework\Exception\LocalizedException(__($e->getMessage()));
         }
     }
-    
+    /**
+     * Update Order Status
+     *
+     * @return string
+     */
     private function _updateOrderStatus()
     {
         $this->paymentoperations->updateOrderStatus($this->_order);

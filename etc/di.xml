@@ -27,6 +27,7 @@
         <arguments>
             <argument name="methodCodes" xsi:type="array">
                 <item name="worldpay_cc" xsi:type="string">worldpay_cc</item>
+                <item name="worldpay_apm" xsi:type="string">worldpay_apm</item>
                 <item name="worldpay_cc_vault" xsi:type="string">worldpay_cc_vault</item>
                 <item name="worldpay_wallets" xsi:type="string">worldpay_wallets</item>
             </argument>
@@ -76,6 +77,4 @@
         </arguments>
     </virtualType>
     <preference for="Sapient\AccessWorldpay\Api\HistoryInterface" type="Sapient\AccessWorldpay\Model\Notification\History" />
-    <!--<preference for="Sapient\AccessWorldpay\Api\PaymentTypeInterface" type="Sapient\AccessWorldpay\Model\Payment\PaymentTypes" />-->
-    
 </config>

@@ -18,12 +18,19 @@ input WorldpayInput {
     tokenUrl: String! @doc(description: "Token Url")
     googlepayToken: String! @doc(description: "Googlepay Token")
     applepayToken: String! @doc(description: "Applepay Token")
+    ach_account: String! @doc(description: "Account type")
+    ach_accountNumber: String! @doc(description: "Account Number")
+    ach_routingNumber: String! @doc(description: "Routing Number")
+    ach_checknumber: String @doc(description: "Check Number")
+    ach_companyname: String @doc(description: "Company Name")
+    ach_emailaddress: String @doc(description: "Email Id")
+    statementNarrative: String @doc(description: "Narrative")
 }
 
 type SavedCards @doc(description: "SavedCards retrieves the avaialable stored worldpay cards for a customer") {
     id: Int @doc(description: "The ID generated for each token")
     tokenid: String @doc(description: "Token id generated for each worldpay stored card")
-    cardnumber : String @doc(description: "card number present on worldpay stored card")
+    cardnumber: String @doc(description: "card number present on worldpay stored card")
     cardholdername: String @doc(description: "card name present on worldpay stored card")
     cardexpirymonth: Int @doc(description: "card expiry month for the worldpay stored card")
     cardexpiryyear: Int @doc(description: "card expiry year for the worldpay stored card")
@@ -32,7 +39,7 @@ type SavedCards @doc(description: "SavedCards retrieves the avaialable stored wo
 
 type Mutation {
     deleteWorldpayToken(id: Int!, tokenid: String!): DeleteWorldpayTokenOutput @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\DeleteToken") @doc(description:"Delete worldpay token")
-    updateWorldpayToken(id: Int!, input : UpdateWorldpayInput!): UpdateWorldpayTokenOutput @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\UpdateToken")
+    updateWorldpayToken(id: Int!, input: UpdateWorldpayInput!): UpdateWorldpayTokenOutput @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\UpdateToken")
 	@doc(description:"Update worldpay token")
 }
 
@@ -53,14 +60,14 @@ input UpdateWorldpayInput {
 
 # Declarative Query For Fetch Google Pay Settings
 
-type googlepaySettings @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\GooglepaySettings") {
+type GooglepaySettings @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\GooglepaySettings") {
     settings: [GpayConfigurations]! @doc(description: "googlepay admin settings")
 }
 
 type GpayConfigurations @doc(description: "Retrieves the Googlepay admin settings") {
     enabled: Int @doc(description: "Gives detail about is googlepay is enabled or disabled")
-    paymentmethods: paymentMethods @doc(description: "Gives the list of selected payment methods")
-    supportedauthentication : supportedAuthentication  @doc(description: "Gives the list of supported authentication methods")
+    paymentmethods: PaymentMethods @doc(description: "Gives the list of selected payment methods")
+    supportedauthentication: SupportedAuthentication  @doc(description: "Gives the list of supported authentication methods")
     gatewayname: String @doc(description: "Gives gateway name")
     gatewaymerchantid: String @doc(description: "Gives gateway merchant id")
     googlemerchantid: String @doc(description: "Gives google merchant id")
@@ -68,24 +75,24 @@ type GpayConfigurations @doc(description: "Retrieves the Googlepay admin setting
     test3dscardholdername: String @doc(description: "Gives test 3ds cardholdername ")
 }
 
-type paymentMethods @doc(description: "Gives the list of selected payment methods"){
+type PaymentMethods @doc(description: "Gives the list of selected payment methods"){
     method: [String] @doc(description: "method name")
 }
 
-type supportedAuthentication @doc(description: "Gives the list of supported authentication methods"){
+type SupportedAuthentication @doc(description: "Gives the list of supported authentication methods"){
     option: [String] @doc(description: "auth name")
 }
 
 # Declarative Query For Fetch Applepay, GooglePay and CAM Settings
 type Query {
-    applepaySettings: applepaySettings @doc(description: "Return applepay admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\ApplepaySettings") @cache(cacheable: false)
-    googlepaySettings: googlepaySettings @doc(description: "Return googlepay admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\GooglepaySettings") @cache(cacheable: false)
-    camSettings: camSettings @doc(description: "Return cam label admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\CamSettings") @cache(cacheable: false)
-    worldpayTokens: WorldpayToken @doc(description: "Return a list of worldpay payment tokens for a customer") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\SavedCards") @cache(cacheable: false)
-    customLabelsSettings: customLabelsSettings @doc(description: "Return custom labels admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\CustomLabelsSettings") @cache(cacheable: false)
+    applepaySettings: ApplepaySettings @doc(description: "Return applepay admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\ApplepaySettings")
+    googlepaySettings: GooglepaySettings @doc(description: "Return googlepay admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\GooglepaySettings")
+    camSettings: CamSettings @doc(description: "Return cam label admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\CamSettings")
+    worldpayTokens: WorldpayToken @doc(description: "Return a list of worldpay payment tokens for a customer") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\SavedCards")
+    customLabelsSettings: CustomLabelsSettings @doc(description: "Return custom labels admin settings") @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\CustomLabelsSettings")
 }
 
-type applepaySettings @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\ApplepaySettings") {
+type ApplepaySettings @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\\ApplepaySettings") {
     settings: [ApplepayConfigurations]! @doc(description: "applelepay admin settings")
 }
 
@@ -99,34 +106,34 @@ type ApplepayConfigurations @doc(description: "Retrieves the applelepay admin se
 }
 
 
-type camSettings {
+type CamSettings {
     settings: [CamConfigurations] @doc(description: "cam admin settings")
 }
 
 type CamConfigurations @doc(description: "Retrieves the Googlepay admin settings") {    
-    accountLevelMessage: accountLevelMessage @doc(description: "Gives the list of custom account level message list")
-    accessWorldPayMessage : accessWorldPayMessage  @doc(description: "Gives the list of custom accessworldpay message list")
-    checkoutMessage : checkoutMessage @doc(description: "Gives the list of custom checkout alert message list")
+    accountLevelMessage: AccountLevelMessage @doc(description: "Gives the list of custom account level message list")
+    accessWorldPayMessage: AccessWorldPayMessage  @doc(description: "Gives the list of custom accessworldpay message list")
+    checkoutMessage: CheckoutMessage @doc(description: "Gives the list of custom checkout alert message list")
     
 }
 
-type accountLevelMessage @doc(description: "Gives the list of available custom alert message list"){
-    setting: record! @doc(description: "message list")
+type AccountLevelMessage @doc(description: "Gives the list of available custom alert message list"){
+    setting: Record! @doc(description: "message list")
 }
 
-type accessWorldPayMessage @doc(description: "Gives the list of available custom alert message list"){
-    setting: record! @doc(description: "message list")
+type AccessWorldPayMessage @doc(description: "Gives the list of available custom alert message list"){
+    setting: Record! @doc(description: "message list")
 }
 
-type checkoutMessage @doc(description: "Gives the list of available custom alert message list"){
-    setting: record! @doc(description: "message list")
+type CheckoutMessage @doc(description: "Gives the list of available custom alert message list"){
+    setting: Record! @doc(description: "message list")
 }
 
-type record @doc(description: "Gives the list of available custom alert message list"){
-    list:[records]! @doc(description: "message list")
+type Record @doc(description: "Gives the list of available custom alert message list"){
+    list:[Records]! @doc(description: "message list")
 }
 
-type records @doc(description: "Gives the list of available custom alert message list"){
+type Records @doc(description: "Gives the list of available custom alert message list"){
     messageCode:String @doc(description: "message list")
     actualMessage:String @doc(description: "message list")
     customMessage:String @doc(description: "message list")
@@ -138,30 +145,30 @@ type WorldpayToken @resolver(class: "\\Sapient\\AccessWorldpay\\Model\\Resolver\
 
 #Configurable Labels
 
-type customLabelsSettings {
+type CustomLabelsSettings {
     settings: [CustomLabelsConfigurations] @doc(description: "custom labels admin settings")
 }
 
 type CustomLabelsConfigurations @doc(description: "Retrieves the custom labels admin settings") {    
-    accountLabels: accountLabels @doc(description: "Gives the list of custom account level labels list")
-    adminLabels : adminLabels  @doc(description: "Gives the list of custom admin level labels list")
-    checkoutLabels : checkoutLabels @doc(description: "Gives the list of custom checkout level labels list")
+    accountLabels: AccountLabels @doc(description: "Gives the list of custom account level labels list")
+    adminLabels: AdminLabels  @doc(description: "Gives the list of custom admin level labels list")
+    checkoutLabels: CheckoutLabels @doc(description: "Gives the list of custom checkout level labels list")
     
 }
-type accountLabels @doc(description: "Gives the list of available custom labels list"){
-    setting: recordLabels! @doc(description: "message list")
+type AccountLabels @doc(description: "Gives the list of available custom labels list"){
+    setting: RecordLabels! @doc(description: "message list")
 }
-type adminLabels @doc(description: "Gives the list of available custom labels list"){
-    setting: recordLabels! @doc(description: "message list")
+type AdminLabels @doc(description: "Gives the list of available custom labels list"){
+    setting: RecordLabels! @doc(description: "message list")
 }
-type checkoutLabels @doc(description: "Gives the list of available custom labels list"){
-    setting: recordLabels! @doc(description: "message list")
+type CheckoutLabels @doc(description: "Gives the list of available custom labels list"){
+    setting: RecordLabels! @doc(description: "message list")
 }
-type recordLabels @doc(description: "Gives the list of available custom alert message list"){
-    list:[recordsLabelsList]! @doc(description: "message list")
+type RecordLabels @doc(description: "Gives the list of available custom alert message list"){
+    list:[RecordsLabelsList]! @doc(description: "message list")
 }
 
-type recordsLabelsList @doc(description: "Gives the list of available custom alert message list"){
+type RecordsLabelsList @doc(description: "Gives the list of available custom alert message list"){
     labelCode:String @doc(description: "message list")
     defaultLabel:String @doc(description: "message list")
     customLabel:String @doc(description: "message list")

@@ -11,6 +11,7 @@ class History implements HistoryInterface
 
     /**
      * Constructor
+     *
      * @param \Sapient\AccessWorldpay\Model\HistoryNotification $historyNotification
      */
     public function __construct(

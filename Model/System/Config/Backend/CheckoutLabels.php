@@ -10,7 +10,14 @@ use Magento\Framework\Phrase;
  */
 class CheckoutLabels extends \Magento\Framework\App\Config\Value
 {
+    /**
+     * @var \Sapient\AccessWorldpay\Helper\GeneralException
+     */
     private $generalexception;
+
+    /**
+     * @var \Magento\Store\Model\StoreManagerInterface
+     */
     private $storeManager;
 
     /**
@@ -19,6 +26,8 @@ class CheckoutLabels extends \Magento\Framework\App\Config\Value
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
      * @param \Magento\Framework\App\Cache\TypeListInterface $cacheTypeList
      * @param \Sapient\AccessWorldpay\Helper\CheckoutLabels $checkoutLabels
+     * @param \Sapient\AccessWorldpay\Helper\GeneralException $generalexception
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data

@@ -17,14 +17,21 @@ class Index extends \Magento\Framework\App\Action\Action
      */
     protected $pageFactory;
 
+    /**
+     * @var $rawBody
+     */
     protected $_rawBody;
     /**
      * @var \Sapient\AccessWorldpay\Model\HistoryNotificationFactory
      */
     protected $historyNotification;
+    /**
+     * @var $fileDriver
+     */
+    protected $fileDriver;
 
-    const RESPONSE_OK = '[OK]';
-    const RESPONSE_FAILED = '[FAILED]';
+    private const RESPONSE_OK = '[OK]';
+    private const RESPONSE_FAILED = '[FAILED]';
 
     /**
      * Constructor
@@ -38,6 +45,7 @@ class Index extends \Magento\Framework\App\Action\Action
      * @param \Sapient\AccessWorldpay\Model\Request $request
      * @param \Sapient\AccessWorldpay\Model\PaymentMethods\PaymentOperations $paymentoperations
      * @param \Sapient\AccessWorldpay\Model\HistoryNotificationFactory $historyNotification
+     * @param \Magento\Framework\Filesystem\DriverInterface $fileDriver
      */
     public function __construct(
         Context $context,
@@ -48,7 +56,8 @@ class Index extends \Magento\Framework\App\Action\Action
         \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse,
         \Sapient\AccessWorldpay\Model\Request $request,
         \Sapient\AccessWorldpay\Model\PaymentMethods\PaymentOperations $paymentoperations,
-        \Sapient\AccessWorldpay\Model\HistoryNotificationFactory $historyNotification
+        \Sapient\AccessWorldpay\Model\HistoryNotificationFactory $historyNotification,
+        \Magento\Framework\Filesystem\DriverInterface $fileDriver
     ) {
         parent::__construct($context);
         $this->wplogger = $wplogger;
@@ -59,8 +68,12 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->directResponse = $directResponse;
         $this->request = $request;
         $this->paymentoperations = $paymentoperations;
+        $this->fileDriver = $fileDriver;
     }
 
+    /**
+     * Execute
+     */
     public function execute()
     {
         $this->wplogger->info('notification index url hit');
@@ -88,11 +101,14 @@ class Index extends \Magento\Framework\App\Action\Action
         }
     }
 
+    /**
+     * Get raw body
+     */
     public function _getRawBody()
     {
         if (null === $this->_rawBody) {
-            $body = file_get_contents('php://input');
-
+          //  $body = file_get_contents('php://input');
+            $body = $this->fileDriver->fileGetContents('php://input');
             if (strlen(trim($body)) > 0) {
                 $this->_rawBody = $body;
             } else {
@@ -109,7 +125,9 @@ class Index extends \Magento\Framework\App\Action\Action
     }
 
     /**
-     * @param $xmlRequest SimpleXMLElement
+     * Create Payment update
+     *
+     * @param xml|string $xmlRequest
      */
     private function _createPaymentUpdate($xmlRequest)
     {
@@ -119,6 +137,9 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->_logNotification();
     }
 
+    /**
+     * Log notification
+     */
     private function _logNotification()
     {
         $this->wplogger->info('########## Received notification ##########');
@@ -138,6 +159,9 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->_order = $this->orderservice->getByIncrementId($orderIncrementId);
     }
 
+    /**
+     * Try to apply payment update
+     */
     private function _tryToApplyPaymentUpdate()
     {
         try {
@@ -148,6 +172,9 @@ class Index extends \Magento\Framework\App\Action\Action
         }
     }
 
+    /**
+     * Return ok
+     */
     public function _returnOk()
     {
         $resultJson = $this->resultJsonFactory->create();
@@ -156,6 +183,9 @@ class Index extends \Magento\Framework\App\Action\Action
         return $resultJson;
     }
 
+    /**
+     * Return Failure
+     */
     public function _returnFailure()
     {
         $resultJson = $this->resultJsonFactory->create();
@@ -166,6 +196,8 @@ class Index extends \Magento\Framework\App\Action\Action
 
     /**
      * Save Notification
+     *
+     * @param string|xml $xml
      */
     private function updateNotification($xml)
     {
@@ -184,6 +216,9 @@ class Index extends \Magento\Framework\App\Action\Action
         $hn->save();
     }
     
+    /**
+     * Update order status
+     */
     private function _updateOrderStatus()
     {
         $this->paymentoperations->updateOrderStatus($this->_order);

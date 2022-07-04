@@ -19,7 +19,8 @@ class Challenge extends \Magento\Framework\View\Element\Template
     protected $checkoutSession;
        
     /**
-     * Jwt constructor.
+     * Jwt constructor
+     *
      * @param \Magento\Backend\Block\Template\Context $context
      * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param Data $helper
@@ -37,6 +38,11 @@ class Challenge extends \Magento\Framework\View\Element\Template
         parent::__construct($context, $data);
     }
 
+    /**
+     * Get Challenge Configs
+     *
+     * @return array
+     */
     public function challengeConfigs()
     {
           $threeDsChallengeData = $this->checkoutSession->get3DschallengeData();

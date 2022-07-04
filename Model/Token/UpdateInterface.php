@@ -12,11 +12,15 @@ namespace Sapient\AccessWorldpay\Model\Token;
 interface UpdateInterface
 {
     /**
+     * Getting token code
+     *
      * @return string
      */
     public function getTokenCode();
 
     /**
+     * Is success?
+     *
      * @return boolean
      */
     public function isSuccess();

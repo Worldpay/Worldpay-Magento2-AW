@@ -7,43 +7,105 @@ namespace Sapient\AccessWorldpay\Model\XmlBuilder;
  */
 class WalletOrder
 {
-    const DYNAMIC3DS_DO3DS = 'do3DS';
-    const DYNAMIC3DS_NO3DS = 'no3DS';
-    const EXPONENT = 2;
-    const ROOT_ELEMENT = <<<EOD
+    public const DYNAMIC3DS_DO3DS = 'do3DS';
+    public const DYNAMIC3DS_NO3DS = 'no3DS';
+    public const EXPONENT = 2;
+    public const ROOT_ELEMENT = <<<EOD
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE paymentService PUBLIC '-//WorldPay/DTD WorldPay PaymentService v1//EN'
         'http://dtd.worldpay.com/paymentService_v1.dtd'> <paymentService/>
 EOD;
 
+    /**
+     * @var string
+     */
     private $merchantCode;
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * @var string
+     */
     private $orderDescription;
+    /**
+     * @var string
+     */
     private $currencyCode;
+    /**
+     * @var float
+     */
     private $amount;
+    /**
+     * @var string
+     */
     private $paymentType;
+    /**
+     * @var float
+     */
     private $exponent;
+    /**
+     * @var mixed|null
+     */
     protected $paResponse = null;
+    /**
+     * @var string|null
+     */
     protected $dfReferenceId = null;
+    /**
+     * @var string
+     */
     private $sessionId;
+    /**
+     * @var Sapient\Worldpay\Model\XmlBuilder\Config\ThreeDSecure
+     */
     protected $threeDSecureConfig;
+    /**
+     * @var string
+     */
     private $cusDetails;
+    /**
+     * @var string
+     */
     private $shopperIpAddress;
+    /**
+     * @var array
+     */
     private $paymentDetails;
+    /**
+     * @var array
+     */
     private $shippingAddress;
+    /**
+     * @var string
+     */
     protected $acceptHeader;
+    /**
+     * @var string
+     */
     protected $userAgentHeader;
     
-    /**
-     * Build xml for processing Request
-     *
-     * @param string $merchantCode
-     * @param string $orderCode
-     * @param string $orderDescription
-     * @param string $currencyCode
-     * @param float $amount
-     * @param string $paymentType
-     * @return SimpleXMLElement $xml
-     */
+     /**
+      * Build xml for processing Request
+      *
+      * @param string $merchantCode
+      * @param string $orderCode
+      * @param string $orderDescription
+      * @param string $currencyCode
+      * @param float $amount
+      * @param string $paymentType
+      * @param string $shopperEmail
+      * @param string $acceptHeader
+      * @param string $userAgentHeader
+      * @param string $protocolVersion
+      * @param string $signature
+      * @param string $signedMessage
+      * @param array $shippingAddress
+      * @param array $billingAddress
+      * @param string $cusDetails
+      * @param string $shopperIpAddress
+      * @param array $paymentDetails
+      * @return SimpleXMLElement $xml
+      */
     public function build(
         $merchantCode,
         $orderCode,
@@ -96,7 +158,7 @@ EOD;
       * @param string $merchantCode
       * @param string $orderCode
       * @param array $paymentDetails
-      * @param $dfReferenceId
+      * @param string $dfReferenceId
       * @return SimpleXMLElement $xml
       */
     public function build3Ds2Secure(
@@ -134,8 +196,8 @@ EOD;
      * @param string $merchantCode
      * @param string $orderCode
      * @param array $paymentDetails
-     * @param $paResponse,
-     * @param $echoData
+     * @param mixed $paResponse
+     * @param bool $echoData
      * @return SimpleXMLElement $xml
      */
     public function build3DSecure(
@@ -174,6 +236,7 @@ EOD;
     }
     /**
      * Add Customer Risk Data  and its child tag to xml
+     *
      * @param SimpleXMLElement $order
      */
     protected function _addCustomerRiskData($order)
@@ -265,6 +328,7 @@ EOD;
     }
     /**
      * Add Additional3Ds data and its child tag to xml
+     *
      * @param SimpleXMLElement $order
      */
     protected function _addAdditional3DsElement($order)
@@ -365,6 +429,8 @@ EOD;
     }
 
     /**
+     * Add cdata to xml
+     *
      * @param SimpleXMLElement $element
      * @param string $content
      */
@@ -376,16 +442,19 @@ EOD;
     }
 
     /**
+     * Returns the rounded value of num to specified precision
+     *
      * @param float $amount
      * @return int
      */
+ 
     private function _amountAsInt($amount)
     {
         return round($amount, $this->exponent, PHP_ROUND_HALF_EVEN) * pow(10, $this->exponent);
     }
 
     /**
-     * Add description  to json Obj
+     * Add transaction Ref
      *
      * @param
      */
@@ -395,7 +464,7 @@ EOD;
     }
 
     /**
-     * Add description  to json Obj
+     * Add merchant Info
      *
      * @param
      */
@@ -406,7 +475,7 @@ EOD;
     }
 
     /**
-     * Add description  to json Obj
+     * Add instruction Info
      *
      * @param
      */
@@ -420,7 +489,7 @@ EOD;
     }
 
     /**
-     * Add description  to json Obj
+     * Add narrative Info
      *
      * @param
      */
@@ -431,7 +500,7 @@ EOD;
     }
 
     /**
-     * Add description  to json Obj
+     * Add value Info
      *
      * @param
      */
@@ -442,7 +511,7 @@ EOD;
     }
 
     /**
-     * Add description  to json Obj
+     * Add Payment Info
      *
      * @param
      */
@@ -452,7 +521,12 @@ EOD;
                 "walletToken" => json_encode($this->getGoolepayToken())];
         return $paymentData;
     }
-
+    /**
+     * Return GoolepayToken
+     *
+     * @return string GoolepayToken
+     */
+    
     private function getGoolepayToken()
     {
         return ["protocolVersion"=>$this->protocolVersion,

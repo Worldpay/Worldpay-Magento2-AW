@@ -11,6 +11,7 @@
             <argument name="dataProviders" xsi:type="array">
                 <item name="worldpay_cc" xsi:type="object">Sapient\AccessWorldpay\Model\WorldpayDataProvider</item>
                 <item name="worldpay_wallets" xsi:type="object">Sapient\AccessWorldpay\Model\WorldpayWalletDataProvider</item>
+                <item name="worldpay_apm" xsi:type="object">Sapient\AccessWorldpay\Model\WorldpayAPMDataProvider</item>
             </argument>
         </arguments>
     </type>    

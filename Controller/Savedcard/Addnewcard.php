@@ -25,8 +25,8 @@ class Addnewcard extends \Magento\Framework\App\Action\Action
      *
      * @param Context $context
      * @param \Magento\Framework\View\Result\PageFactory $resultPageFactory
-     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      */
     public function __construct(
         Context $context,

@@ -21,7 +21,7 @@
                           attr: {'value': getCode() + '_usesavedcard',
                                  'data-validate': JSON.stringify({
                                     'validate-one-required-by-name':true }),
-                                 id: getCode() + '_usesavedcard'}"/>
+                                 id: getCode() + '_usesavedcard'}"></input>
             <label data-bind="attr: {for: getCode() + '_usesavedcard'}">
                 <!-- ko i18n: getCheckoutLabels('CO13')--><!-- /ko --></label>
     </div>
@@ -30,12 +30,12 @@
     <!-- ko if: (isShowLegend())-->
     <legend class="legend">
         <span><!-- ko i18n: 'Credit Card Information'--><!-- /ko --></span>
-    </legend><br />
+    </legend></br>
     <!-- /ko -->
    <div class="field type required" data-bind="attr: {id: getCode() + '_cc_type_div'}">
        
       
-        <input type="radio" name="payment[cc_type]" value="VISA-SSL" checked="checked"/>
+        <input type="radio" name="payment[cc_type]" value="VISA-SSL" checked="checked"></input>
                   
        
     </div>
@@ -59,7 +59,7 @@
                                     enable: isActive($parents),
                                     value: creditCardNumber,
                                     valueUpdate: 'keyup'
-                                    "/>
+                                    "></input>
             <span class="cc-card-type"></span>
          
         </div>
@@ -79,7 +79,7 @@
                                       'required':true
                                     })},
                                     value: cardHolderName,
-                                    "/>
+                                    "></input>
         </div>
     </div>
 
@@ -134,7 +134,7 @@
                         'data-container': getCode() + '-cc-cvv',
                         'data-validate': JSON.stringify({'required-number':true, 'validate-card-cvv':'#' + getCode() + '_cc_type'})},
                         enable: isActive($parents),
-                        value: creditCardVerificationNumber" />
+                        value: creditCardVerificationNumber"></input>
             <div class="field-tooltip toggle">
                 <span class="field-tooltip-action action-cvv"
                       tabindex="0"

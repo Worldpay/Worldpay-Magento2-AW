@@ -5,16 +5,55 @@ namespace Sapient\AccessWorldpay\Model\JsonBuilder;
 class ThreeDsAuthentication
 {
     
-    const EXPONENT = 2;
+    public const EXPONENT = 2;
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * @var array
+     */
     private $paymentDetails;
+    /**
+     * @var array
+     */
     private $billingAddress;
+    /**
+     * @var string
+     */
     private $currencyCode;
+    /**
+     * @var float
+     */
     private $amount;
+    /**
+     * @var string
+     */
     private $acceptHeader;
+    /**
+     * @var string
+     */
     private $userAgentHeader;
+    /**
+     * Customer Risk Data
+     *
+     * @var array
+     */
     private $riskData;
     
+    /**
+     * Build jsonObj for processing Request
+     *
+     * @param string $orderCode
+     * @param array $paymentDetails
+     * @param float $billingAddress
+     * @param string $currencyCode
+     * @param float $amount
+     * @param string $acceptHeader
+     * @param string $userAgentHeader
+     * @param array $riskData
+     * @return string
+     */
     public function build(
         $orderCode,
         $paymentDetails,
@@ -37,6 +76,11 @@ class ThreeDsAuthentication
         return json_encode($jsonData);
     }
     
+    /**
+     * Build an order data array
+     *
+     * @return array
+     */
     private function _addOrderElement()
     {
         $orderData = [];
@@ -53,17 +97,32 @@ class ThreeDsAuthentication
         return $orderData;
     }
     
+    /**
+     * Add order code to jsonObj
+     *
+     * @return array
+     */
     private function _addTransactionRef()
     {
         return $this->orderCode;
     }
     
+    /**
+     * Add merchant entity referecne to jsonObj
+     *
+     * @return array
+     */
     private function _addMerchantInfo()
     {
         $merchantData = ["entity" => $this->paymentDetails['entityRef']];
         return $merchantData;
     }
     
+    /**
+     * Add instruction info data's to jsonObj
+     *
+     * @return array
+     */
     private function _addInstructionInfo()
     {
         $instruction = [];
@@ -73,6 +132,11 @@ class ThreeDsAuthentication
         return $instruction;
     }
     
+    /**
+     * Add payment info data's to jsonObj
+     *
+     * @return array
+     */
     private function _addPaymentInfo()
     {
         if (isset($this->paymentDetails['token_url'])) {
@@ -86,6 +150,11 @@ class ThreeDsAuthentication
         return $paymentData;
     }
     
+    /**
+     * Add billing address to jsonObj
+     *
+     * @return array
+     */
     private function _addBillingAddress()
     {
         $billingData = ["address1" => $this->billingAddress['street'],
@@ -95,6 +164,11 @@ class ThreeDsAuthentication
         return $billingData;
     }
     
+    /**
+     * Add currency and amount to jsonObj
+     *
+     * @return array
+     */
     private function _addValue()
     {
         $valueData = ["currency" =>$this->currencyCode,
@@ -102,11 +176,22 @@ class ThreeDsAuthentication
         return $valueData;
     }
     
+    /**
+     * Returns the rounded value of num to specified precision
+     *
+     * @param float $amount
+     * @return int
+     */
     private function _amountAsInt($amount)
     {
         return round($amount, self::EXPONENT, PHP_ROUND_HALF_EVEN) * pow(10, self::EXPONENT);
     }
     
+    /**
+     * Add device data to jsonObj
+     *
+     * @return array
+     */
     private function _addDeviceData()
     {
         if (isset($this->paymentDetails['collectionReference'])) {
@@ -117,12 +202,22 @@ class ThreeDsAuthentication
         return $deviceData;
     }
     
+    /**
+     * Add return url and preference to jsonObj
+     *
+     * @return array
+     */
     private function _addUrl()
     {
-        $urlData = [ "returnUrl" => $this->paymentDetails['url']];
+        $urlData = [ "returnUrl" => $this->paymentDetails['url'], "preference" => $this->paymentDetails['preference']];
         return $urlData;
     }
     
+    /**
+     * Add Risk Data to jsonObj
+     *
+     * @return array
+     */
     private function _addRiskData()
     {
         $riskData = [
@@ -134,11 +229,17 @@ class ThreeDsAuthentication
         return $riskData;
     }
     
+    /**
+     * Add Risk Account Data to jsonObj
+     *
+     * @return array
+     */
     private function addRiskAccountData()
     {
         $account = [
            "type"  => $this->riskData['type'],
            "email" => $this->riskData['email'],
+           "previousSuspiciousActivity" => $this->riskData['suspiciousActivity'],
            "history" => [
              "createdAt" =>$this->riskData['createdAt'],
              "modifiedAt" =>$this->riskData['modifiedAt']
@@ -148,16 +249,28 @@ class ThreeDsAuthentication
         return $account;
     }
     
+    /**
+     * Add Risk Transaction Data to jsonObj
+     *
+     * @return array
+     */
     private function addRiskTransactionData()
     {
         $transaction = [
            "firstName"  => $this->riskData['firstName'],
            "lastName" => $this->riskData['lastName']
         ];
-        
+        if (isset($this->riskData['phoneNumber']) && $this->riskData['phoneNumber']!='') {
+            $transaction["phoneNumber"] = $this->riskData['phoneNumber'];
+        }
         return $transaction;
     }
     
+    /**
+     * Add Risk Shipping Data to jsonObj
+     *
+     * @return array
+     */
     private function addRiskShippingData()
     {
         $shipping = [

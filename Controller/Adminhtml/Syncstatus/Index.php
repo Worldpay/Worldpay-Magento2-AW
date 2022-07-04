@@ -10,16 +10,38 @@ use Sapient\AccessWorldpay\Helper\GeneralException;
 
 class Index extends \Magento\Backend\App\Action
 {
+    /**
+     * @var $pageFactory
+     */
     protected $pageFactory;
+    /**
+     * @var $rawBody
+     */
     protected $_rawBody;
-
+    /**
+     * @var $orderId
+     */
     private $_orderId;
+    /**
+     * @var $order
+     */
     private $_order;
+    /**
+     * @var $paymentUpdate
+     */
     private $_paymentUpdate;
+    /**
+     * @var $tokenState
+     */
     private $_tokenState;
+    /**
+     * @var $helper
+     */
     private $helper;
+    /**
+     * @var $storeManager
+     */
     private $storeManager;
-    
     
     /**
      * Constructor
@@ -27,8 +49,11 @@ class Index extends \Magento\Backend\App\Action
      * @param Context $context
      * @param JsonFactory $resultJsonFactory
      * @param \Sapient\AccessWorldpay\Logger\WorldpayLogger $wplogger
-     * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice,
-     * @param \Sapient\AccessWorldpay\Model\Order\Service $orderservice,
+     * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice
+     * @param \Sapient\AccessWorldpay\Model\Order\Service $orderservice
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @param \Sapient\AccessWorldpay\Model\PaymentMethods\PaymentOperations $paymentoperations
+     * @param \Sapient\AccessWorldpay\Helper\GeneralException $helper
      */
     public function __construct(
         Context $context,
@@ -51,6 +76,9 @@ class Index extends \Magento\Backend\App\Action
         $this->paymentoperations = $paymentoperations;
     }
     
+    /**
+     * Execute
+     */
     public function execute()
     {
         $this->_loadOrder();
@@ -61,8 +89,6 @@ class Index extends \Magento\Backend\App\Action
             $this->_registerWorldPayModel();
             $this->_applyPaymentUpdate();
             $this->_updateOrderStatus();
-            //$this->_applyTokenUpdate();
-
         } catch (Exception $e) {
             $this->wplogger->error($e->getMessage());
             if ($e->getMessage() == 'same state') {
@@ -79,12 +105,18 @@ class Index extends \Magento\Backend\App\Action
         return $this->_redirectBackToOrderView();
     }
     
+    /**
+     * Load Order
+     */
     private function _loadOrder()
     {
         $this->_orderId = (int) $this->_request->getParam('order_id');
         $this->_order = $this->orderservice->getById($this->_orderId);
     }
     
+    /**
+     * Fetch Payment Update
+     */
     private function _fetchPaymentUpdate()
     {
         $xml = $this->paymentservice->getPaymentUpdateXmlForOrder($this->_order);
@@ -92,11 +124,17 @@ class Index extends \Magento\Backend\App\Action
         //$this->_tokenState = new \Sapient\Worldpay\Model\Token\StateXml($xml);
     }
 
+    /**
+     * Register worldpay model
+     */
     private function _registerWorldPayModel()
     {
         $this->paymentservice->setGlobalPaymentByPaymentUpdate($this->_paymentUpdate);
     }
     
+    /**
+     * Apply payment update
+     */
     private function _applyPaymentUpdate()
     {
         try {
@@ -109,6 +147,9 @@ class Index extends \Magento\Backend\App\Action
         }
     }
     
+    /**
+     * Redirect back to order view
+     */
     private function _redirectBackToOrderView()
     {
         $resultRedirect = $this->resultRedirectFactory->create();
@@ -116,6 +157,9 @@ class Index extends \Magento\Backend\App\Action
         return $resultRedirect;
     }
     
+    /**
+     * Update order status
+     */
     private function _updateOrderStatus()
     {
         $this->paymentoperations->updateOrderStatus($this->_order);

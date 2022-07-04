@@ -39,14 +39,20 @@
                 </field>
                 <field id="merchant_entity" translate="label" type="text" sortOrder="8" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Merchant Entity Reference</label>
-                    <validate>required-entry</validate>    
+                    <validate>required-entry</validate>
                     <comment><![CDATA[
                             <ul style="margin-left: 2em;">
                             <li><small>Value default is applicable for test environment.</small></li>
                             <li><small>To get your production `entity reference` contact your Worldpay Implementation Manager</small></li>
                             </ul>
                         ]]>
-                    </comment>                                    
+                    </comment>
+                </field>
+                <field id="narrative" translate="label" type="text" sortOrder="8" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Narrative</label>
+                    <validate>required-entry validate-length maximum-length-24</validate>
+                    <depends><field id="enabled">1</field></depends>
+                    <comment>The text that appears on your customer's statement. Used to identify the merchant.</comment>
                 </field>
                 <field id="merchant_identity" translate="label" type="text" sortOrder="9" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>AccessCheckout Identity</label>
@@ -65,11 +71,29 @@
                     <label>Enabled Logging</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
-                
-               
+
+
                 <field id="order_description" translate="label" type="textarea" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Description</label>                                        
+                    <label>Description</label>
                 </field>
+                <group id="plugin_tracker" translate="label" type="text" sortOrder="21" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Plugin Tracker Details</label>
+                <field id="current_wopay_plugin_version" translate="label" type="text" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Current Worldpay Plugin Version</label>
+                    <frontend_model>Sapient\AccessWorldpay\Block\Adminhtml\Form\Field\Disable</frontend_model>
+                    <backend_model>Sapient\AccessWorldpay\Model\System\Config\Backend\CurrentPluginVersion</backend_model>
+                </field>
+                <field id="wopay_plugin_version_history" translate="label" type="textarea" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Worldpay Plugin Version Used Till Date</label>
+                    <frontend_model>Sapient\AccessWorldpay\Block\Adminhtml\Form\Field\Disable</frontend_model>
+                    <backend_model>Sapient\AccessWorldpay\Model\System\Config\Backend\PluginVersionHistory</backend_model>
+                </field>
+                <field id="upgrade_dates" translate="label" type="textarea" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Upgrade Dates</label>
+                    <frontend_model>Sapient\AccessWorldpay\Block\Adminhtml\Form\Field\Disable</frontend_model>
+                    <backend_model>Sapient\AccessWorldpay\Model\System\Config\Backend\PluginUpgradeDates</backend_model>
+                </field>
+                </group>
             </group>
             <!--Credit Card-->
             <group id="cc_config" translate="label" type="text" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
@@ -124,7 +148,7 @@
                     <field id="stored_credentials_flag" translate="label" type="select" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Important Disclaimer Mandatory</label>
                         <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    </field>                    
+                    </field>
                 </group>
             </group>
              <!--Credit Card 3DS-->
@@ -134,22 +158,46 @@
                     <label>Activate 3DS Authentication</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
+                <field id="challenge_preference" translate="label" type="select" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Challenge Preference</label>
+                        <source_model>Sapient\AccessWorldpay\Model\Config\Source\ChallengePreference</source_model>
+                </field>
                 <field id="challenge_window_size" translate="label" type="select" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Challenge Window Type</label>
                     <depends><field id="enable_dynamic3DS2">1</field></depends>
                     <source_model>Sapient\AccessWorldpay\Model\Config\Source\ChallengeWindowSize</source_model>
                 </field>
             </group>
+            <!-- APM -->
+            <group id="apm_config" translate="label" type="text" sortOrder="11" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Alternative Payment Method</label>
+                <!--Apm enabled-->
+                <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="paymentmethods" translate="label" type="multiselect" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Payment Methods</label>
+                    <source_model>Sapient\AccessWorldpay\Model\Config\Source\PaymentMethodsApm</source_model>
+                </field>
+                <field id="achaccounttypes" translate="label" type="multiselect" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>ACH Account Types</label>
+                    <source_model>Sapient\AccessWorldpay\Model\Config\Source\ACHAccountTypes</source_model>
+                </field>
+                <field id="title" translate="label" type="text" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Title</label>
+                </field>
+            </group>
               <!-- Instant Purchase with Worldpay -->
             <group id="quick_checkout_config" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Instant Purchase with Worldpay</label>                
+                <label>Instant Purchase with Worldpay</label>
                 <field id="instant_purchase" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Enable Instant Page Checkout</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>If set to "Yes", Worldpay as payment method will be available during Instant purchase.</comment>
                 </field>
-            </group>  
-          
+            </group>
+
            <group id="wallets_config" translate="label" type="text" sortOrder="8" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Mobile Wallets</label>
                 <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
@@ -178,22 +226,22 @@
                     <field id="gateway_merchantname" translate="label" type="text" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Gateway Name</label>
                         <comment>For this detail, You must connect with your Worldpay contact.</comment>
-                    </field> 
+                    </field>
                     <field id="gateway_merchantid" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Gateway MerchantId</label>
                         <comment>For this detail, You must connect with your Worldpay contact.</comment>
-                    </field> 
+                    </field>
                      <field id="google_merchantid" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Google MerchantId</label>
                         <comment>This field only required for production mode. This can be generated from merchant's Google account</comment>
-                    </field> 
+                    </field>
                      <field id="google_merchantname" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Google MerchantName</label>
-                    </field> 
+                    </field>
                 </group>
-                
+
                 <!-- Apple Pay Configuration -->
-                
+
                 <group id="apple_pay_wallets_config" translate="label" showInDefault="1" showInWebsite="1" sortOrder="3">
                     <label>Apple Pay</label>
                     <!--Apple Pay  enabled-->
@@ -204,11 +252,11 @@
                      <field id="certification_key" translate="label" type="text" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Apple Pay Certification Key</label>
                         <comment>Location of the ApplePay.key.pem. eg. /var/www/html/cert/.  Files should be have read access by the webserver</comment>
-                    </field> 
+                    </field>
                      <field id="certification_crt" translate="label" type="text" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Apple Pay Certification Path</label>
                         <comment>Location of the ApplePay.crt.pem. eg. /var/www/html/cert/.  Files should be have read access by the webserver</comment>
-                    </field> 
+                    </field>
                     <field id="certification_password" translate="label" type="password" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
                         <label>Apple Pay Certification Password</label>
                         <comment>Password set during the export of p12 file.</comment>
@@ -222,7 +270,7 @@
                         <comment>eg. mydomain.com</comment>
                     </field>
                 </group>
-                
+
             </group>
             <!-- Synchronize Order Status -->
             <group id="order_sync_status" translate="label" type="text" sortOrder="16" showInDefault="1" showInWebsite="1" showInStore="1">
@@ -236,8 +284,317 @@
                     <comment>Orders placed within the entered hours will be considered for synchronization.</comment>
                 </field>
             </group>
+	    <!-- Exemption Engine -->
+            <group id="exemption_config" translate="label" type="text" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Exemption Engine</label>
+                <field id="exemption_engine" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Exemption Engine</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>If set to Yes, transactions may be exempted from SCA, based on real-time risk analysis.</comment>
+                </field>
+            </group>
+            <!-- Payment Logo Configuration-->
+             <!-- Payment Method Logo Group -->
+            <group id="payment_method_logo_config" translate="label" type="text" sortOrder="17" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Logo Personalisation of Payment Methods</label>
+                <!-- Payment Method Logo enabled-->
+                <field id="payment_method_logo_config_enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <group id="cc" translate="label" type="text" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Credit Card Logo Config</label>
+                    <group id="amex_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>American Express </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                    <group id="visa_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Visa </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group> 
+                    <group id="ecmc_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Master Card </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                    <group id="cb_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Carte Bancaire </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                     <group id="cartebleue_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Carte Bleue </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                       <group id="dankort_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Dankort </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                     <group id="diners_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Diners </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group> 
+                      <group id="discover_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Discover </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                     <group id="jcb_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Japanese Credit Bank </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                     <group id="maestro_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Maestro </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                     <depends>
+                        <field id="worldpay/payment_method_logo_config/payment_method_logo_config_enabled">1</field>
+                    </depends>
+                </group>
+                <group id="apm" translate="label" type="text" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>APM Logo Config</label>
+                    <group id="ach_direct_debit_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>ACH Pay </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>                    
+                    <depends>
+                        <field id="worldpay/payment_method_logo_config/payment_method_logo_config_enabled">1</field>
+                    </depends>
+                </group>
+                <group id="wallet" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Wallets Logo Config </label>
+                    <group id="applepay_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Apple Pay </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>
+                    <group id="paywithgoogle_ssl" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Google Pay </label>
+                        <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Use Custom Logo</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        </field> 
+                        <field id="logo_config" translate="label" type="Sapient\AccessWorldpay\Block\Adminhtml\System\Config\Field\Image" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                                <label>Logo</label>
+                                <backend_model>Sapient\AccessWorldpay\Model\Config\Backend\Image</backend_model>
+                                <upload_dir config="sapient_accessworldpay/images" scope_info="1">sapient_accessworldpay/images</upload_dir>
+                                <base_url type="media" scope_info="1">sapient_accessworldpay/images</base_url>
+                                <comment><![CDATA[Allowed file types: jpg, jpeg, png, gif . <br />
+                                <ul style="margin-left: 2em;">
+                                <li>Recommended size: Logo size should be (50*30)px and Max upto 50KB.</li>
+                                </ul>
+                                ]]></comment>
+                                <depends><field id="enabled">1</field></depends>
+                        </field>            
+                    </group>                                       
+                    <depends>
+                        <field id="worldpay/payment_method_logo_config/payment_method_logo_config_enabled">1</field>
+                    </depends>
+                </group>  
+            </group>
+            <!-- End Payment Logo Configuration-->
+            <!-- Worldpay API security alerts -->
+            <group id="wp_error_alerts" translate="label"  sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Worldpay API security alerts</label>               
+                <field id="enable_error_alerts" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Worldpay Security Alerts </label> 
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>This feature enables you to receive the API security alerts and report the incident to Worldpay (if set to "Yes" below).</comment>                  
+                </field>
+                <field id="error_alert_emails" translate="label" type="text" sortOrder="2" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Recipient Email(s)</label> 
+                    <comment>Multiple emails can be added using comma seperated(i.e abc@example.com,xyz@example.com)</comment>
+                     <depends><field id="enable_error_alerts">1</field></depends>
+                </field>
+                <field id="send_email_to_worldpay" translate="label" type="select" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Do you want to report the error(if appears) to worldpay?</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Note: If set to "Yes", this setting will send the security incident report to Worldpay.</comment>
+                    <depends><field id="enable_error_alerts">1</field></depends>
+                </field>
+                 <field id="wp_team_email" translate="label" type="label" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Worldpay Team Email</label>
+                    <depends><field id="enable_error_alerts">1</field></depends>
+                </field>                
+            </group>
         </section>
-        
+
         <!-- New Tab for Worldpay exceptions -->
         <section id="worldpay_exceptions" translate="label" type="text" sortOrder="402" showInDefault="1" showInWebsite="1" showInStore="1">
             <label>AccessWorldpay Exception Codes</label>

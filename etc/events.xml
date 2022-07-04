@@ -13,4 +13,7 @@
     <event name="payment_method_assign_data_worldpay_wallets">
         <observer name="worldpay_wallets_gateway_data_assign" instance="Sapient\AccessWorldpay\Observer\DataAssignObserver" />
     </event>
+    <event name="payment_method_assign_data_worldpay_apm">
+        <observer name="worldpay_apm_gateway_data_assign" instance="Sapient\AccessWorldpay\Observer\DataAssignObserver" />
+    </event>
 </config>

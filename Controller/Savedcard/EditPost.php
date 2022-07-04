@@ -39,8 +39,9 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
      * @param StoreManagerInterface $storeManager
      * @param \Sapient\AccessWorldpay\Model\Token\Service $tokenService
      * @param \Sapient\AccessWorldpay\Model\Token\WorldpayToken $worldpayToken
-     * @param \Magento\Framework\Message\ManagerInterface $messageManager
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param PaymentTokenRepositoryInterface $tokenRepository
+     * @param PaymentTokenManagement $paymentTokenManagement
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      */
     public function __construct(
@@ -145,6 +146,8 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
     }
 
     /**
+     * GetTokenModel
+     *
      * @return Sapient/AccessWorldPay/Model/Token
      */
     protected function _getTokenModel()
@@ -167,6 +170,9 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         return $token;
     }
 
+    /**
+     * Apply Vault TokenUpdate
+     */
     protected function _applyVaultTokenUpdate()
     {
         $existingVaultPaymentToken = $this->paymentTokenManagement->getByGatewayToken(
@@ -177,6 +183,11 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         $this->_saveVaultToken($existingVaultPaymentToken);
     }
     
+    /**
+     * Save Vault Token
+     *
+     * @param PaymentTokenInterface $vaultToken
+     */
     protected function _saveVaultToken(PaymentTokenInterface $vaultToken)
     {
         $vaultToken->setTokenDetails($this->convertDetailsToJSON([
@@ -192,16 +203,31 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         }
     }
 
+    /**
+     * Get Expiration MonthAndYear
+     *
+     * @param string $token
+     */
     public function getExpirationMonthAndYear($token)
     {
         return $token->getCardExpiryMonth().'/'.$token->getCardExpiryYear();
     }
 
+    /**
+     * Get Last Four Numbers
+     *
+     * @param string $number
+     */
     public function getLastFourNumbers($number)
     {
         return substr($number, -4);
     }
 
+    /**
+     * Convert Details To JSON
+     *
+     * @param string $details
+     */
     private function convertDetailsToJSON($details)
     {
         $json = \Zend_Json::encode($details);
@@ -210,6 +236,8 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
     
     /**
      * Update Saved Card Detail
+     *
+     * @param string $tokenInquiryResponse
      */
     protected function _applyTokenInquiry($tokenInquiryResponse)
     {
@@ -220,6 +248,9 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
     }
     
     /**
+     * Get Token Model Inquiry
+     *
+     * @param string $tokenInquiryResponse
      * @return Sapient/WorldPay/Model/Token
      */
     protected function _getTokenModelInquiry($tokenInquiryResponse)
@@ -236,6 +267,11 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         return $token;
     }
 
+    /**
+     * Get Expiry Error Response
+     *
+     * @param string $body
+     */
     public function getExpiryErrorResponse($body)
     {
         $result = '';
@@ -248,6 +284,11 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         return $result;
     }
 
+    /**
+     * Get ErrorArray
+     *
+     * @param string $body
+     */
     public function getErrorArray($body)
     {
         $result = '';
@@ -260,6 +301,11 @@ class EditPost extends \Magento\Customer\Controller\AbstractAccount
         return $result;
     }
 
+    /**
+     * Get Error Response
+     *
+     * @param string $body
+     */
     public function getErrorResponse($body)
     {
         $result = '';

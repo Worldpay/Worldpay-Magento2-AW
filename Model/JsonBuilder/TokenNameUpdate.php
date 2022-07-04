@@ -25,6 +25,11 @@ class TokenNameUpdate
      */
     protected $merchantCode;
 
+    /**
+     * TokenNameUpdate constructor
+     *
+     * @param array $args
+     */
     public function __construct(array $args = [])
     {
         if (isset($args['tokenModel']) && $args['tokenModel'] instanceof \Sapient\AccessWorldPay\Model\SavedToken) {
@@ -42,6 +47,7 @@ class TokenNameUpdate
 
     /**
      * Build xml for processing Request
+     *
      * @return SimpleXMLElement $xml
      */
     public function build()

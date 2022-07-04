@@ -82,6 +82,7 @@ class PlaceOrder extends Action
      * @param InstantPurchaseOptionLoadingFactory $instantPurchaseOptionLoadingFactory
      * @param ProductRepositoryInterface $productRepository
      * @param PlaceOrderModel $placeOrder
+     * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param OrderRepositoryInterface $orderRepository
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      */
@@ -184,6 +185,7 @@ class PlaceOrder extends Action
         if ($this->worldpayHelper->is3DSecureEnabled() && $threeDSecureChallengeParams) {
             $this->checkoutSession->setInstantPurchaseMessage($message);
             $message = __('');
+            return $this->createResponse($message, true);
         } else {
             return $this->createResponse($message, true);
         }
@@ -192,6 +194,7 @@ class PlaceOrder extends Action
     /**
      * Creates error message without exposing error details.
      * ########## Payment update of type:
+     *
      * @return string
      */
     private function createGenericErrorMessage(): string

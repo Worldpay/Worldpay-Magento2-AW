@@ -15,6 +15,9 @@ use Sapient\AccessWorldpay\Model\ResourceModel\SavedToken;
 class TokenFormatter implements PaymentTokenFormatterInterface
 {
      
+    /**
+     * @var $_worldpaymentFactory
+     */
     protected $_worldpaymentFactory;
     /**
      * Most used credit card types
@@ -33,6 +36,14 @@ class TokenFormatter implements PaymentTokenFormatterInterface
         'DINERS-SSL' => 'Diners',
     ];
 
+    /**
+     * TokenFormatter constructor
+     *
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param \Sapient\AccessWorldpay\Model\SavedTokenFactory $savedWPFactory
+     * @param \Sapient\AccessWorldpay\Helper\Data $wpdata
+     * @param SavedToken $savedtoken
+     */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
         \Sapient\AccessWorldpay\Model\SavedTokenFactory $savedWPFactory,

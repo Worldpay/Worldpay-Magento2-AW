@@ -12,21 +12,46 @@ use Magento\Framework\Exception\LocalizedException;
  */
 abstract class ResponseAbstract
 {
-    const INTERNAL_ERROR = 1;
-    const PARSE_ERROR = 2;
-    const SECURITY_ERROR = 4;
-    const INVALID_REQUEST_ERROR = 5;
-    const INVALID_CONTENT_ERROR = 6;
-    const PAYMENT_DETAILS_ERROR = 7;
+    public const INTERNAL_ERROR = 1;
+    public const PARSE_ERROR = 2;
+    public const SECURITY_ERROR = 4;
+    public const INVALID_REQUEST_ERROR = 5;
+    public const INVALID_CONTENT_ERROR = 6;
+    public const PAYMENT_DETAILS_ERROR = 7;
 
+    /**
+     * @var SimpleXmlElement
+     */
     protected $_responseXml;
+
+    /**
+     * @var string
+     */
     protected $_merchantCode;
+
+    /**
+     * @var string
+     */
     protected $_paymentStatus;
+
+    /**
+     * @var string
+     */
     protected $_payAsOrder;
+
+    /**
+     * @var \Magento\Framework\Exception\LocalizedException
+     */
     protected $_errorMessage;
+
+    /**
+     * @var string
+     */
     protected $_wpOrderId;
 
     /**
+     * Get Xml
+     *
      * @return SimpleXMLElement
      */
     public function getXml()
@@ -35,8 +60,10 @@ abstract class ResponseAbstract
     }
 
     /**
-     * @param $response
-     * @return  $this
+     * Set Response
+     *
+     * @param SimpleXmlElement $response
+     * @return $this
      */
     public function setResponse($response)
     {

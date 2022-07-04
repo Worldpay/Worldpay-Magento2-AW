@@ -9,11 +9,30 @@ namespace Sapient\AccessWorldpay\Model\Token;
  */
 class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
 {
+
+    /**
+     * @var SimpleXMLElement
+     */
     private $_xml;
+    /**
+     * @var $_tokenNode
+     */
     private $_tokenNode;
+    /**
+     * @var $_cardNode
+     */
     private $_cardNode;
+    /**
+     * @var $_derivedNode
+     */
     private $_derivedNode;
+    /**
+     * @var $_paymentNode
+     */
     private $_paymentNode;
+    /**
+     * @var $_orderStatusNode
+     */
     private $_orderStatusNode;
 
     /**
@@ -47,6 +66,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Get order code
+     *
      * @return string
      */
     public function getOrderCode()
@@ -55,6 +76,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Getting token code
+     *
      * @return string
      */
     public function getTokenCode()
@@ -67,6 +90,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Get Customer ID
+     *
      * @return int
      */
     public function getCustomerId()
@@ -75,6 +100,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive authenticated shopper id
+     *
      * @return string
      */
     public function getAuthenticatedShopperId()
@@ -83,6 +110,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive obfuscated card number
+     *
      * @return string
      */
     public function getObfuscatedCardNumber()
@@ -91,6 +120,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive card holder name
+     *
      * @return string
      */
     public function getCardholderName()
@@ -99,6 +130,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive token expiry date
+     *
      * @return \DateTime
      */
     public function getTokenExpiryDate()
@@ -109,12 +142,19 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
         return $expireDate->setDate((int)$dateNode['year'], (int)$dateNode['month'], (int)$dateNode['dayOfMonth']);
     }
 
+    /**
+     * Retrive payment methods
+     *
+     * @return string
+     */
     public function getPaymentMethod()
     {
         return (string)$this->_paymentNode->paymentMethod;
     }
 
     /**
+     * Retrive card brand
+     *
      * @return string
      */
     public function getCardBrand()
@@ -123,6 +163,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive card sub brand
+     *
      * @return string
      */
     public function getCardSubBrand()
@@ -131,6 +173,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive card issuer country code
+     *
      * @return string
      */
     public function getCardIssuerCountryCode()
@@ -139,6 +183,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive merchant code
+     *
      * @return string
      */
     public function getMerchantCode()
@@ -147,6 +193,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive token reason
+     *
      * @return string
      */
     public function getTokenReason()
@@ -159,6 +207,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive token event
+     *
      * @return string
      */
     public function getTokenEvent()
@@ -167,6 +217,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive card expiry month
+     *
      * @return int
      */
     public function getCardExpiryMonth()
@@ -175,6 +227,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
 
     /**
+     * Retrive card expiry year
+     *
      * @return int
      */
     public function getCardExpiryYear()
@@ -183,6 +237,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
     
     /**
+     * Retrive bin
+     *
      * @return string
      */
     public function getBin()
@@ -191,6 +247,8 @@ class StateXml implements \Sapient\AccessWorldpay\Model\Token\StateInterface
     }
     
     /**
+     * Retrive transaction identifier
+     *
      * @return string
      */
     public function getTransactionIdentifier()

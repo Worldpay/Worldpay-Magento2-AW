@@ -6,7 +6,14 @@ namespace Sapient\AccessWorldpay\Logger;
 
 class AccessWorldpayLogger extends \Monolog\Logger
 {
-    public function addRecord($level, $message, array $context = [])
+    /**
+     *  Add Record
+     *
+     * @param string $level
+     * @param string $message
+     * @param array $context
+     */
+    public function addRecord($level, $message, array $context = []) : bool
     {
         $ObjectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $logEnabled = (bool) $ObjectManager->get(
@@ -16,5 +23,6 @@ class AccessWorldpayLogger extends \Monolog\Logger
         if ($logEnabled) {
             return parent::addRecord($level, $message, $context);
         }
+        return false;
     }
 }

@@ -14,23 +14,70 @@ use Sapient\AccessWorldpay\Logger\AccessWorldpayLogger;
  */
 class DirectOrder
 {
-    const EXPONENT = 2;
-
+    public const EXPONENT = 2;
+    /**
+     * @var string
+     */
     private $merchantCode;
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * @var string
+     */
     private $orderDescription;
+    /**
+     * @var string
+     */
     private $currencyCode;
+    /**
+     * @var float
+     */
     private $amount;
+    /**
+     * @var array
+     */
     protected $paymentDetails;
+    /**
+     * @var array
+     */
     private $cardAddress;
+    /**
+     * @var string
+     */
     protected $shopperEmail;
+    /**
+     * @var string
+     */
     protected $acceptHeader;
+    /**
+     * @var string
+     */
     protected $userAgentHeader;
+    /**
+     * @var array
+     */
     private $shippingAddress;
+    /**
+     * @var array
+     */
     private $billingAddress;
+    /**
+     * @var mixed|null
+     */
     protected $paResponse = null;
+    /**
+     * @var bool|null
+     */
     private $echoData = null;
+    /**
+     * @var string
+     */
     private $shopperId;
+    /**
+     * @var string
+     */
     private $quoteId;
 
     /**
@@ -49,6 +96,8 @@ class DirectOrder
      * @param string $shippingAddress
      * @param float $billingAddress
      * @param string $shopperId
+     * @param string $quoteId
+     * @param string $verifiedToken
      * @return SimpleXMLElement $xml
      */
     public function build(
@@ -116,7 +165,7 @@ class DirectOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add merchant Info
      *
      * @param
      */
@@ -127,7 +176,7 @@ class DirectOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add instruction Info
      *
      * @param
      */
@@ -139,7 +188,7 @@ class DirectOrder
 
         if ($this->verifiedToken != '') {
             $instruction['paymentInstrument'] = $this->_addVerifiedTokenInfo();
-            
+
         } else {
             $instruction['paymentInstrument'] = $this->_addPaymentInfo();
         }
@@ -147,18 +196,18 @@ class DirectOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add narrative Info
      *
      * @param
      */
     private function _addNarrativeInfo()
     {
-        $narrationData = ["line1" => "trading name"];
+        $narrationData = ["line1" => $this->paymentDetails['narrative']];
         return $narrationData;
     }
 
     /**
-     * Add description  to json Obj
+     * Add value Info
      *
      * @param
      */
@@ -169,9 +218,9 @@ class DirectOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add payment Info
      *
-     * @param
+     * @param array $paymentData
      */
     private function _addPaymentInfo()
     {
@@ -202,11 +251,11 @@ class DirectOrder
             return $paymentData;
         }
     }
-    
+
     /**
-     * Add description  to json Obj
+     * Return verified token
      *
-     * @param
+     * @return array $paymentData
      */
     private function _addVerifiedTokenInfo()
     {
@@ -216,6 +265,8 @@ class DirectOrder
     }
 
     /**
+     * Returns the rounded value of num to specified precision
+     *
      * @param float $amount
      * @return int
      */

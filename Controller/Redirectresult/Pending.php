@@ -45,6 +45,9 @@ class Pending extends \Magento\Framework\App\Action\Action
         return parent::__construct($context);
     }
 
+    /**
+     * Execute
+     */
     public function execute()
     {
         $this->wplogger->info('worldpay returned pending url');
@@ -75,6 +78,12 @@ class Pending extends \Magento\Framework\App\Action\Action
         return $this->pageFactory->create();
     }
 
+    /**
+     * ApplyPaymentUpdate
+     *
+     * @param string $paymentState
+     * @param string $order
+     */
     private function _applyPaymentUpdate($paymentState, $order)
     {
         try {

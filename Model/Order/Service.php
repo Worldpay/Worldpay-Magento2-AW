@@ -49,6 +49,8 @@ class Service
     }
 
     /**
+     * Get Order By Id
+     *
      * @param int $orderId
      * @return \Sapient\AccessWorldpay\Model\Order
      */
@@ -69,6 +71,8 @@ class Service
     }
 
     /**
+     * Get Order by IncrementId
+     *
      * @param string $incrementId
      * @return \Sapient\AccessWorldpay\Model\Order
      */
@@ -89,7 +93,7 @@ class Service
     }
 
     /**
-     * if order is success send email and mark order as processing
+     * If order is success send email and mark order as processing
      */
     public function redirectOrderSuccess()
     {
@@ -99,6 +103,8 @@ class Service
     }
 
     /**
+     * Get Authorised Order
+     *
      * @return Increament Id
      */
     public function getAuthorisedOrder()

@@ -9,29 +9,49 @@ use \Magento\Framework\Exception\LocalizedException;
 
 class Base
 {
-    /** @var \Sapient\AccessWorldpay\Model\Payment\State */
+    /**
+     * @var $_paymentState
+     */
     protected $_paymentState;
-    /** @var \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment */
+    
+    /**
+     * @var $_worldPayPayment
+     */
     protected $_worldPayPayment;
-
-    const STATUS_PROCESSING = 'processing';
-    const STATUS_CANCELLED = 'cancelled';
-    const STATUS_CLOSED = 'closed';
+    
+    /**
+     * @var STATUS_PROCESSING
+     */
+    public const STATUS_PROCESSING = 'processing';
+   
+    /**
+     * @var STATUS_CANCELLED
+     */
+    public const STATUS_CANCELLED = 'cancelled';
+   
+    /**
+     * @var $_worldPayPayment
+     */
+    public const STATUS_CLOSED = 'closed';
 
     /**
      * Constructor
-     * @param \Sapient\AccessWorldpay\Model\Payment\State $paymentState
+     *
+     * @param \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState
      * @param \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment
      */
     public function __construct(
-        \Sapient\AccessWorldpay\Model\Payment\State $paymentState,
+        \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState,
         \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment
     ) {
 
         $this->_paymentState = $paymentState;
         $this->_worldPayPayment = $worldPayPayment;
     }
+
     /**
+     * Get order code
+     *
      * @return string ordercode
      */
     public function getTargetOrderCode()
@@ -40,7 +60,8 @@ class Base
     }
 
     /**
-     * check payment Status
+     * Check payment Status
+     *
      * @param object $order
      * @param array $allowedPaymentStatuses
      * @return null
@@ -66,7 +87,9 @@ class Base
     }
 
     /**
-     * check if order is not placed throgh worldpay payment
+     * Check if order is not placed throgh worldpay payment
+     *
+     * @param object $order
      * @throws Exception
      */
     private function _assertPaymentExists($order)
@@ -76,8 +99,11 @@ class Base
         }
     }
 
-    /*
-    * convert worldpay amount to magento amount
+   /**
+    * Convert worldpay amount to magento amount
+    *
+    * @param float $amount
+    * @return int
     */
     protected function _amountAsInt($amount)
     {

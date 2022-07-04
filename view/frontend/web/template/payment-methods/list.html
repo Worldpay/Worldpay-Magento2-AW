@@ -21,7 +21,7 @@
                  <img data-bind="attr: { src: require.toUrl('Sapient_AccessWorldpay/images/cc/worldpay-logo.png') }" alt="worldpay logo" class="worldpay-logo-paymentscreen" />
                </div>
           </div>
-        <each args="data: getRegion($group().displayArea), as: 'method'" render=""/>
+        <each args="data: getRegion($group().displayArea), as: 'method'" render=""></each>
     </div>
 </div>
 <div ifnot="isPaymentMethodsAvailable()"

@@ -5,13 +5,13 @@ namespace Sapient\AccessWorldpay\Model\Payment;
 
 class Hpp extends \Magento\Payment\Model\Method\AbstractMethod
 {
-
+    /**
+     * @var string
+     */
     protected $_code = "hpp";
+    
+    /**
+     * @var boolean
+     */
     protected $_isOffline = true;
-
-    public function isAvailable(
-        \Magento\Quote\Api\Data\CartInterface $quote = null
-    ) {
-        return parent::isAvailable($quote);
-    }
 }

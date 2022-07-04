@@ -21,6 +21,8 @@ class OrderStatus implements \Magento\Framework\Option\ArrayInterface
     }
 
     /**
+     * ToOptionArray
+     *
      * @return array
      */
     public function toOptionArray()

@@ -6,10 +6,12 @@ namespace Sapient\AccessWorldpay\Model\Config\Source;
 
 class IntegrationMode implements \Magento\Framework\Option\ArrayInterface
 {
-    const OPTION_VALUE_DIRECT = 'direct';
-    const OPTION_VALUE_WEBSDK = 'web_sdk';
+    public const OPTION_VALUE_DIRECT = 'direct';
+    public const OPTION_VALUE_WEBSDK = 'web_sdk';
     
     /**
+     * ToOptionArray
+     *
      * @return array
      */
     public function toOptionArray()

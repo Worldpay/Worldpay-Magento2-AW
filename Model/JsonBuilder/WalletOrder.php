@@ -7,21 +7,63 @@ namespace Sapient\AccessWorldpay\Model\JsonBuilder;
  */
 class WalletOrder
 {
-    const EXPONENT = 2;
-    
+    public const EXPONENT = 2;
+
+   /**
+    * @var $merchantCode
+    */
     private $merchantCode;
+    /**
+     * @var $orderCode
+     */
     private $orderCode;
+    /**
+     * @var $orderDescription
+     */
     private $orderDescription;
+    /**
+     * @var $currencyCode
+     */
     private $currencyCode;
+    /**
+     * @var $amount
+     */
     private $amount;
+    /**
+     * @var $paymentType
+     */
     private $paymentType;
+    /**
+     * @var $exponent
+     */
     private $exponent;
+    /**
+     * @var $sessionId
+     */
     private $sessionId;
+    /**
+     * @var $cusDetails
+     */
     private $cusDetails;
+    /**
+     * @var $shopperIpAddress
+     */
     private $shopperIpAddress;
+    /**
+     * @var $paymentDetails
+     */
     private $paymentDetails;
+    /**
+     * @var $shippingAddress
+     */
     private $shippingAddress;
+    /**
+     * @var $acceptHeader
+     */
     protected $acceptHeader;
+    /**
+     * @var $userAgentHeader
+     */
     protected $userAgentHeader;
 
     /**
@@ -33,6 +75,17 @@ class WalletOrder
      * @param string $currencyCode
      * @param float $amount
      * @param string $paymentType
+     * @param string $shopperEmail
+     * @param string $acceptHeader
+     * @param string $userAgentHeader
+     * @param string $protocolVersion
+     * @param string $signature
+     * @param string $signedMessage
+     * @param array $shippingAddress
+     * @param array $billingAddress
+     * @param string $cusDetails
+     * @param string $shopperIpAddress
+     * @param array $paymentDetails
      * @return SimpleXMLElement $xml
      */
     public function build(
@@ -75,10 +128,11 @@ class WalletOrder
         $jsonData = $this->_addOrderElement();
         return json_encode($jsonData);
     }
-    
+
     /**
-     * Add order tag to json
+     * Add order tag to xml
      *
+     * @return SimpleXMLElement $order
      */
     private function _addOrderElement()
     {
@@ -91,6 +145,8 @@ class WalletOrder
     }
 
     /**
+     * Returns the rounded value of num to specified precision
+     *
      * @param float $amount
      * @return int
      */
@@ -100,9 +156,9 @@ class WalletOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add transaction Ref
      *
-     * @param
+     * @return string
      */
     private function _addTransactionRef()
     {
@@ -110,9 +166,9 @@ class WalletOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add merchant Info
      *
-     * @param
+     * @return array
      */
     private function _addMerchantInfo()
     {
@@ -121,9 +177,9 @@ class WalletOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add instruction Info
      *
-     * @param
+     * @return string
      */
     private function _addInstructionInfo()
     {
@@ -135,20 +191,20 @@ class WalletOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add narrative Info
      *
-     * @param
+     * @return string
      */
     private function _addNarrativeInfo()
     {
-        $narrationData = ["line1" => "trading name"];
+        $narrationData = ["line1" => $this->paymentDetails['narrative']];
         return $narrationData;
     }
 
     /**
-     * Add description  to json Obj
+     * Add value Info
      *
-     * @param
+     * @return array
      */
     private function _addValueInfo()
     {
@@ -157,9 +213,9 @@ class WalletOrder
     }
 
     /**
-     * Add description  to json Obj
+     * Add payment Info
      *
-     * @param
+     * @return array
      */
     private function _addPaymentInfo()
     {
@@ -168,6 +224,11 @@ class WalletOrder
         return $paymentData;
     }
 
+    /**
+     * Get googlepay token
+     *
+     * @return array
+     */
     private function getGoolepayToken()
     {
         return ["protocolVersion"=>$this->protocolVersion,

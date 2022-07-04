@@ -9,6 +9,9 @@ use \Magento\Framework\Exception\LocalizedException;
 
 class Order
 {
+    /**
+     * @var string
+     */
     private $_order;
 
     /**
@@ -46,6 +49,11 @@ class Order
         $this->creditmemoRepository = $creditmemoRepository;
     }
 
+    /**
+     * Get Order
+     *
+     * @return string
+     */
     public function getOrder()
     {
         return $this->_order;
@@ -71,6 +79,11 @@ class Order
         return $this->getOrder()->getPayment()->getMethod();
     }
 
+    /**
+     * Get payment Type
+     *
+     * @return string
+     */
     public function getPaymentType()
     {
         return $this->getWorldPayPayment()->getPaymentType();
@@ -89,7 +102,11 @@ class Order
             $mageOrder->save();
         }
     }
-    
+    /**
+     * Capture
+     *
+     * @return $this
+     */
     public function capture()
     {
         if (!$this->_canInvoice()) {
@@ -112,6 +129,8 @@ class Order
     }
 
     /**
+     * Get Payment
+     *
      * @return Magento\Sales\Model\Order\Payment
      */
     public function getPayment()
@@ -120,6 +139,8 @@ class Order
     }
 
     /**
+     * Get Payment Status
+     *
      * @return string
      */
     public function getPaymentStatus()
@@ -127,11 +148,21 @@ class Order
         return $this->getWorldPayPayment()->getPaymentStatus();
     }
 
+    /**
+     * Can Invoice?
+     *
+     * @return $this
+     */
     private function _canInvoice()
     {
         return $this->getOrder()->canInvoice();
     }
 
+    /**
+     * Invoice Order
+     *
+     * @return $this
+     */
     private function _invoiceOrder()
     {
         $order = $this->getOrder();
@@ -156,6 +187,11 @@ class Order
         $transactionSave->save();
     }
 
+    /**
+     * Has WorldPay Payment
+     *
+     * @return $this
+     */
     public function hasWorldPayPayment()
     {
         if (!$this->getOrder()->getPayment()) {
@@ -166,6 +202,8 @@ class Order
     }
 
     /**
+     * Get Worldpay Payment
+     *
      * @return Sapient/AccessWorldpay/Model/AccessWorldpayment
      */
     public function getWorldPayPayment()
@@ -195,7 +233,11 @@ class Order
     }
     
     /**
-     * Mark Credit Memo as refunded
+     * Mark credit Memo as refunded
+     *
+     * @param string $reference
+     * @param string $comment
+     * @return $this
      */
     public function refund($reference, $comment)
     {
@@ -222,8 +264,8 @@ class Order
      * Create Credit Memo, register and mark it as refunded.
      * Deals with the full order or remainder refund only.
      *
-     * @param $amount
-     * @param $comment
+     * @param float $amount
+     * @param string $comment
      */
     public function refundFull($amount, $comment)
     {
@@ -234,7 +276,12 @@ class Order
             $this->_createCreditMemos($comment);
         }
     }
-
+    /**
+     * Order Unrefunded check
+     *
+     * @param float $amount
+     * @return float
+     */
     private function _orderUnrefundedEquals($amount)
     {
         $amount /= 100;
@@ -246,6 +293,8 @@ class Order
     }
 
     /**
+     * Can Refund Full
+     *
      * @return boolean
      */
     private function _canRefundFull()
@@ -264,7 +313,12 @@ class Order
 
         return true;
     }
-
+    /**
+     * Create Credit Memo
+     *
+     * @param string $comment
+     * @return $this
+     */
     private function _createCreditMemos($comment)
     {
         $order = $this->getOrder();
@@ -279,7 +333,13 @@ class Order
             $this->_markRefunded($creditmemo, $comment);
         }
     }
-
+    /**
+     * Mark Refunded
+     *
+     * @param float $creditmemo
+     * @param string $comment
+     * @return $this
+     */
     private function _markRefunded($creditmemo, $comment)
     {
         $creditmemo->setState(\Magento\Sales\Model\Order\Creditmemo::STATE_REFUNDED);
@@ -293,7 +353,14 @@ class Order
          );
         $transactionSave->save();
     }
-
+    /**
+     * Cancel Refunded
+     *
+     * @param string $reference
+     * @param string $comment
+     * @return $this
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
     public function cancelRefund($reference, $comment)
     {
         if (!$reference) {
@@ -313,7 +380,13 @@ class Order
             $this->_cancelCreditmemo($creditmemo, $comment);
         }
     }
-
+    /**
+     * Cancel CreditMemo
+     *
+     * @param float $creditmemo
+     * @param string $comment
+     * @return $this
+     */
     private function _cancelCreditmemo($creditmemo, $comment = null)
     {
         if ($creditmemo && $creditmemo->canCancel()) {
@@ -332,7 +405,12 @@ class Order
             $transactionSave->save();
         }
     }
-
+    /**
+     * Cancel Magento CreditMemo
+     *
+     * @param int $id
+     * @return bool
+     */
     public function cancelMagentoCreditMemo($id)
     {
         try {
@@ -348,7 +426,13 @@ class Order
         }
         return true;
     }
-
+    /**
+     * Deduct Order Totals
+     *
+     * @param Order $order
+     * @param float $creditmemo
+     * @return $this
+     */
     private function _deductOrderTotals($order, $creditmemo)
     {
 

@@ -2,7 +2,7 @@
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
         <referenceBlock name="customer_account_navigation">
-            <block class="Sapient\AccessWorldpay\Block\SavedCardLink" name="customer_account_navigation_saved_Card" cacheable="false">
+            <block class="Sapient\AccessWorldpay\Block\SavedCardLink" name="customer_account_navigation_saved_Card" >
                 <arguments>
                     <argument name="path" xsi:type="string">worldpay/savedcard/index</argument>
                     <argument name="label" xsi:type="string">Saved Card</argument>

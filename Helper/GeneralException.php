@@ -32,6 +32,7 @@ class GeneralException
     /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\Math\Random $mathRandom
+     * @param SerializerInterface $serializer
      */
     public function __construct(
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -191,8 +192,9 @@ class GeneralException
     /**
      * Retrieve merchant detail value from config
      *
-     * @param int $customerGroupId
+     * @param string $paymenttype
      * @param null|string|bool|int|Store $store
+     * @param null|string|bool|int|Store $scope
      * @return float|null
      */
     public function getConfigValue($paymenttype, $store = null, $scope = null)

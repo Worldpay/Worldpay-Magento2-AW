@@ -12,8 +12,15 @@ class Webpayment extends Template
      * @var SerializerInterface
      */
     private $serializer;
-    /*
+
+    /**
+     * Constructor
+     *
+     * @param \Magento\Backend\Block\Template\Context $context
+     * @param \Sapient\AccessWorldpay\Helper\Data $helper
+     * @param \Magento\Framework\Serialize\SerializerInterface $serializer
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param array $data
      */
     public function __construct(
         Template\Context $context,
@@ -31,22 +38,41 @@ class Webpayment extends Template
             $data
         );
     }
-    
+    /**
+     * Is 3D Secure Enable
+     *
+     * @return bool
+     */
     public function is3DSecureEnabled()
     {
         return $this->_helper->is3DSecureEnabled();
     }
 
+    /**
+     * Get Websdk Js Path
+     *
+     * @return string
+     */
     public function getWebSdkJsPath()
     {
         return $this->_helper->getWebSdkJsPath();
     }
-    
+
+    /**
+     * Get Environment Mode
+     *
+     * @return string
+     */
     public function getEnvironmentMode()
     {
         return $this->_helper->getEnvironmentMode();
     }
     
+    /**
+     * Get Credit Card Exception
+     *
+     * @return array
+     */
     public function getCreditCardException()
     {
         $generaldata=$this->serializer->unserialize($this->_helper->getCreditCardException());
@@ -65,7 +91,11 @@ class Webpayment extends Template
         //$output=implode(',', $data);
         return json_encode($data);
     }
-    
+    /**
+     * Get Account Exceptions
+     *
+     * @return array
+     */
     public function myAccountExceptions()
     {
         $generaldata=$this->serializer->unserialize($this->_helper->getMyAccountException());
@@ -82,7 +112,12 @@ class Webpayment extends Template
         }
         return json_encode($data);
     }
-    
+     /**
+      * Get MyAccount Specific Exception
+      *
+      * @param string $exceptioncode
+      * @return array
+      */
     public function getMyAccountSpecificException($exceptioncode)
     {
         $data=json_decode($this->myAccountExceptions(), true);
@@ -95,6 +130,13 @@ class Webpayment extends Template
             }
         }
     }
+
+     /**
+      * Get Credit Card Specific Exception
+      *
+      * @param string $exceptioncode
+      * @return string
+      */
     public function getCreditCardSpecificException($exceptioncode)
     {
         return $this->_helper->getCreditCardSpecificexception($exceptioncode);

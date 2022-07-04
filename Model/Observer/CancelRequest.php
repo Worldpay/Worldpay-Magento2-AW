@@ -22,17 +22,31 @@ class CancelRequest implements ObserverInterface
     protected $paymentservicerequest;
     
     /**
-     * @var \Sapient\AccessWorldpay\Model\Request\CurlRequest
+     * $request params uses
+     *
+     * @var $request
      */
     protected $_request;
     
-    const CURL_POST = true;
-    const CURL_RETURNTRANSFER = true;
-    const CURL_NOPROGRESS = false;
-    const CURL_TIMEOUT = 60;
-    const CURL_VERBOSE = true;
-    const SUCCESS = 200;
+    public const CURL_POST = true;
+    public const CURL_RETURNTRANSFER = true;
+    public const CURL_NOPROGRESS = false;
+    public const CURL_TIMEOUT = 60;
+    public const CURL_VERBOSE = true;
+    public const SUCCESS = 200;
     
+    /**
+     * Constructor
+     *
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param \Magento\Framework\App\ResponseFactory $responseFactory
+     * @param \Magento\Framework\UrlInterface $url
+     * @param \Sapient\AccessWorldpay\Model\OmsDataFactory $omsDataFactory
+     * @param \Sapient\AccessWorldpay\Model\ResourceModel\OmsData\CollectionFactory $omsCollectionFactory
+     * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+     * @param \Magento\Framework\HTTP\Client\Curl $curlrequest
+     */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
         \Magento\Framework\App\ResponseFactory $responseFactory,
@@ -41,7 +55,7 @@ class CancelRequest implements ObserverInterface
         \Sapient\AccessWorldpay\Model\ResourceModel\OmsData\CollectionFactory $omsCollectionFactory,
         \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest,
         \Sapient\AccessWorldpay\Helper\Data $worldpayHelper,
-        \Sapient\AccessWorldpay\Model\Request\CurlRequest $curlrequest
+        \Magento\Framework\HTTP\Client\Curl $curlrequest
     ) {
         $this->wplogger = $wplogger;
         $this->_responseFactory = $responseFactory;
@@ -52,6 +66,12 @@ class CancelRequest implements ObserverInterface
         $this->worldpayHelper = $worldpayHelper;
         $this->curlrequest = $curlrequest;
     }
+    /**
+     * Load the execute method
+     *
+     * @param \Magento\Framework\Event\Observer $observer
+     */
+
     public function execute(\Magento\Framework\Event\Observer $observer)
     {
         $order = $observer->getEvent()->getOrder();
@@ -70,12 +90,18 @@ class CancelRequest implements ObserverInterface
         }
         return true;
     }
-    
+  
+    /**
+     * Load the sendRequest method
+     *
+     * @param string $cancelUrl
+     * @param string $username
+     * @param string $password
+     */
     public function sendRequest($cancelUrl, $username, $password)
     {
+        $quote = null;
         $request = $this->_getRequest();
-        $request->setUrl($cancelUrl);
-
         $this->wplogger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -98,8 +124,9 @@ class CancelRequest implements ObserverInterface
         $this->wplogger->info('Sending Json as: ' . $cancelUrl);
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
-
-        $result = $request->execute();
+        $request->post($cancelUrl, $quote);
+        $result = $request->getBody();
+        //$result = $request->execute();
 
         if (!$result) {
             $this->wplogger->info('Request could not be sent.');
@@ -111,13 +138,12 @@ class CancelRequest implements ObserverInterface
                 'AccessWorldpay api service not available'
             );
         }
-        $request->close();
         $this->wplogger->info('Request successfully sent');
         $this->wplogger->info($result);
     }
     
     /**
-     * @return object
+     * Get Request method
      */
     private function _getRequest()
     {

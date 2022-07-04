@@ -36,16 +36,17 @@ class GuestPaymentInformationManagement
     /**
      * GuestPaymentInformationManagement constructor.
      * @param GuestCartManagementInterface $cartManagement
-     * @param LoggerInterface $logger
+     * @param AccessWorldpayLogger $logger
      * @param MethodList $methodList
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      * @param bool $checkMethods
      */
     public function __construct(
         GuestCartManagementInterface $cartManagement,
         AccessWorldpayLogger $logger,
         MethodList $methodList,
-        $checkMethods = true,
-        \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+        \Sapient\AccessWorldpay\Helper\Data $worldpayHelper,
+        $checkMethods = true
     ) {
         $this->cartManagement = $cartManagement;
         $this->logger = $logger;
@@ -54,10 +55,12 @@ class GuestPaymentInformationManagement
         $this->worldpayHelper = $worldpayHelper;
     }
     /**
+     * Around Save Payment Information And Place Order
+     *
      * @param CheckoutGuestPaymentInformationManagement $subject
      * @param \Closure $proceed
-     * @param $cartId
-     * @param $email
+     * @param string $cartId
+     * @param string $email
      * @param \Magento\Quote\Api\Data\PaymentInterface $paymentMethod
      * @param \Magento\Quote\Api\Data\AddressInterface|null $billingAddress
      * @return int

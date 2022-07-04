@@ -20,6 +20,8 @@ class RedirectResponse extends \Sapient\AccessWorldpay\Model\Response\ResponseAb
     }
     
     /**
+     * Get Redirect Location
+     *
      * @param SimpleXmlElement $xml
      * @return string $url
      */
@@ -36,6 +38,8 @@ class RedirectResponse extends \Sapient\AccessWorldpay\Model\Response\ResponseAb
     }
 
     /**
+     * Get Redirect Url
+     *
      * @param SimpleXmlElement $xml
      * @return string $url
      */
@@ -46,7 +50,11 @@ class RedirectResponse extends \Sapient\AccessWorldpay\Model\Response\ResponseAb
         $url = $this->_responseXml->xpath('reply/orderStatus/reference');
         return trim($url[0]);
     }
-
+    /**
+     * Get CallBack Url
+     *
+     * @return string
+     */
     public function getCallBackUrl()
     {
         $callbackurl = [];

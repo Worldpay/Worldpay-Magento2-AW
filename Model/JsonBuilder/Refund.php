@@ -10,17 +10,36 @@ namespace Sapient\AccessWorldpay\Model\JsonBuilder;
 class Refund
 {
 
-    const EXPONENT = 2;
+    public const EXPONENT = 2;
 
+    /**
+     * @var string
+     */
     private $merchantCode;
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * @var string
+     */
     private $currencyCode;
+    /**
+     * @var float
+     */
     private $amount;
+    /**
+     * @var string
+     */
     private $refundReference;
+    /**
+     * @var string
+     */
     private $requestType;
 
     /**
      * Build xml for processing Request
+     *
      * @param string $merchantCode
      * @param string $orderCode
      * @param string $currencyCode
@@ -63,6 +82,7 @@ class Refund
     /**
      * Add amount to Json
      *
+     * @return array
      */
     private function _addValue()
     {
@@ -73,6 +93,8 @@ class Refund
     }
 
     /**
+     * Returns the rounded value of num to specified precision
+     *
      * @param float $amount
      * @return int
      */

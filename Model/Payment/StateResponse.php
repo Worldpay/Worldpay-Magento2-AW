@@ -7,20 +7,30 @@ namespace Sapient\AccessWorldpay\Model\Payment;
 /**
  * Reading xml
  */
-class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
+class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\StateInterface
 {
-    private $orderCode;
-    private $paymentStatus;
-    private $amount;
+    /**
+     * @var orderCode
+     */
+    public $orderCode;
+    /**
+     * @var paymentStatus
+     */
+    public $paymentStatus;
+    /**
+     * @var amount
+     */
+    public $amount;
 
     /**
      * Constructor
+     *
      * @param string $orderCode
      * @param string $merchantCode
      * @param string $paymentStatus
      * @param float $amount
      */
-    private function __construct($orderCode, $merchantCode, $paymentStatus, $amount)
+    public function __construct($orderCode, $merchantCode, $paymentStatus, $amount)
     {
         $this->orderCode = $orderCode;
         $this->merchantCode = $merchantCode;
@@ -28,45 +38,58 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
         $this->amount = $amount;
     }
     
-    public static function createFromCancelledResponse($params)
+    /**
+     * Create From Cancelled Response
+     *
+     * @param string $params
+     * @return string
+     */
+
+    public function createFromCancelledResponse($params)
     {
         $orderkey = $params['orderKey'];
-        $orderCode = \Sapient\AccessWorldpay\Model\Payment\StateResponse::_extractOrderCode($orderkey);
-        $merchantCode = \Sapient\AccessWorldpay\Model\Payment\StateResponse::_extractMerchantCode($orderkey);
-
+        // extract order code
+        $extractOrderCode = explode('^', $orderkey);
+        $orderCode = end($extractOrderCode);
+        // extract merchantcode
+        $extractMerchantCode = explode('^', $orderkey);
+        $merchantCode = $extractMerchantCode[1];
         return new self(
             $orderCode,
             $merchantCode,
-            \Sapient\AccessWorldpay\Model\Payment\State::STATUS_CANCELLED,
-            null
-        );
-    }
-
-    public static function createFromPendingResponse($params)
-    {
-        $orderkey = $params['orderKey'];
-        $orderCode = \Sapient\AccessWorldpay\Model\Payment\StateResponse::_extractOrderCode($orderkey);
-        $merchantCode = \Sapient\AccessWorldpay\Model\Payment\StateResponse::_extractMerchantCode($orderkey);
-
-        return new self(
-            $orderCode,
-            $merchantCode,
-            \Sapient\AccessWorldpay\Model\Payment\State::STATUS_PENDING_PAYMENT,
-            null
-        );
-    }
-    
-    public static function createFrom3DError($orderCode, $merchantCode, $paymentStatus)
-    {
-        return new self(
-            $orderCode,
-            $merchantCode,
-            $paymentStatus,
+            \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_CANCELLED,
             null
         );
     }
 
     /**
+     * Create from Pending Response
+     *
+     * @param string $params
+     * @param int|bool|null $paymentType
+     * @return string
+     */
+
+    public function createFromPendingResponse($params, $paymentType = null)
+    {
+        $orderkey = $params['orderKey'];
+         // extract order code
+         $extractOrderCode = explode('^', $orderkey);
+         $orderCode = end($extractOrderCode);
+         $extractMerchantCode = explode('^', $orderkey);
+         $merchantCode = $extractMerchantCode[1];
+
+        return new self(
+            $orderCode,
+            $merchantCode,
+            \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_PENDING_PAYMENT,
+            null
+        );
+    }
+
+    /**
+     * Get getOrderCode
+     *
      * @return string
      */
     public function getOrderCode()
@@ -75,6 +98,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getPaymentStatus
+     *
      * @return string
      */
     public function getPaymentStatus()
@@ -83,6 +108,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAmount
+     *
      * @return float
      */
     public function getAmount()
@@ -91,6 +118,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getMerchantCode
+     *
      * @return string
      */
     public function getMerchantCode()
@@ -99,6 +128,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getRiskScore
+     *
      * @return null
      */
     public function getRiskScore()
@@ -107,6 +138,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAdvancedRiskProvider
+     *
      * @return null
      */
     public function getAdvancedRiskProvider()
@@ -115,6 +148,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAdvancedRiskProviderId
+     *
      * @return null
      */
     public function getAdvancedRiskProviderId()
@@ -123,6 +158,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAdvancedRiskProviderThreshold
+     *
      * @return null
      */
     public function getAdvancedRiskProviderThreshold()
@@ -131,6 +168,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAdvancedRiskProviderScore
+     *
      * @return null
      */
     public function getAdvancedRiskProviderScore()
@@ -139,6 +178,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAdvancedRiskProviderFinalScore
+     *
      * @return null
      */
     public function getAdvancedRiskProviderFinalScore()
@@ -147,6 +188,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getPaymentMethod
+     *
      * @return null
      */
     public function getPaymentMethod()
@@ -155,6 +198,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getCardNumber
+     *
      * @return null
      */
     public function getCardNumber()
@@ -163,6 +208,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAvsResultCode
+     *
      * @return null
      */
     public function getAvsResultCode()
@@ -171,6 +218,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getPaymentRefusalCode
+     *
      * @return null
      */
     public function getCvcResultCode()
@@ -179,24 +228,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
-     * @return string
-     */
-    private static function _extractOrderCode($orderKey)
-    {
-        $array = explode('^', $orderKey);
-        return end($array);
-    }
-
-    /**
-     * @return string
-     */
-    private static function _extractMerchantCode($orderKey)
-    {
-        $array = explode('^', $orderKey);
-        return $array[1];
-    }
-
-    /**
+     * Get getPaymentRefusalCode
+     *
      * @return null
      */
     public function getPaymentRefusalCode()
@@ -205,6 +238,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getPaymentRefusalDescription
+     *
      * @return null
      */
     public function getPaymentRefusalDescription()
@@ -213,6 +248,9 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getJournalReference
+     *
+     * @param string $state
      * @return null
      */
     public function getJournalReference($state)
@@ -220,6 +258,11 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
         return null;
     }
     
+    /**
+     * Get getLinks
+     *
+     * @return null
+     */
     public function getLinks()
     {
         return null;
@@ -246,6 +289,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAAVPostcodeResultCode
+     *
      * @return null
      */
     public function getAAVAddressResultCode()
@@ -254,6 +299,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAAVPostcodeResultCode
+     *
      * @return null
      */
     public function getAAVPostcodeResultCode()
@@ -262,6 +309,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAAVCardholderNameResultCode
+     *
      * @return null
      */
     public function getAAVCardholderNameResultCode()
@@ -270,6 +319,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getAAVTelephoneResultCode
+     *
      * @return null
      */
     public function getAAVTelephoneResultCode()
@@ -278,6 +329,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
     
     /**
+     * Get getAAVEmailResultCode
+     *
      * @return null
      */
     public function getAAVEmailResultCode()
@@ -286,6 +339,8 @@ class StateResponse implements \Sapient\AccessWorldpay\Model\Payment\State
     }
 
     /**
+     * Get getCurrency
+     *
      * @return null
      */
     public function getCurrency()

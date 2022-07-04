@@ -5,6 +5,17 @@ use Sapient\AccessWorldpay\Api\DirectSessionHrefInterface;
 
 class DirectSessionHref implements DirectSessionHrefInterface
 {
+    /**
+     * Constructor
+     *
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger         $wplogger
+     * @param \Sapient\AccessWorldpay\Helper\Data                         $worldpayHelper
+     * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest
+     * @param \Sapient\AccessWorldpay\Model\Payment\Service               $paymentservice
+     * @param \Magento\Checkout\Model\Session                             $checkoutSession
+     * @param \Magento\Customer\Model\Session                             $customerSession
+     * @param \Magento\Quote\Model\Quote                                  $quote
+     */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
         \Sapient\AccessWorldpay\Helper\Data $worldpayHelper,
@@ -22,7 +33,14 @@ class DirectSessionHref implements DirectSessionHrefInterface
         $this->quote = $quote;
         $this->customerSession = $customerSession;
     }
-    
+
+    /**
+     * Create Session Href
+     *
+     * @param int $id
+     * @param array $paymentData
+     * @return string
+     */
     public function createSessionHref($id, $paymentData)
     {
          $aditionalData = $paymentData['additional_data'];

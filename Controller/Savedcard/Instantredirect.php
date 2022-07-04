@@ -7,8 +7,17 @@ use Exception;
 
 class Instantredirect extends \Magento\Framework\App\Action\Action
 {
+    /**
+     * @var $checkoutSession
+     */
     protected $checkoutSession;
-
+    /**
+     * Constructor
+     *
+     * @param Context $context
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param \Magento\Checkout\Model\Session $checkoutSession
+     */
     public function __construct(
         Context $context,
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
@@ -19,6 +28,9 @@ class Instantredirect extends \Magento\Framework\App\Action\Action
         parent::__construct($context);
     }
 
+    /**
+     * Receive http post request
+     */
     public function execute()
     {
         $threeDSecureChallengeParams = $this->checkoutSession->get3Dsparams();
