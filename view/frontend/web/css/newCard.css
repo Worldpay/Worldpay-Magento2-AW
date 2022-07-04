@@ -1,1 +1,5 @@
 @import url("jquery-ui.min.css");
+.ui-dialog .ui-dialog-titlebar-close {
+  background-image: url(https://code.jquery.com/ui/1.13.1/themes/base/images/ui-icons_777777_256x240.png);
+  background-position: -96px -128px;
+}

@@ -13,14 +13,22 @@ use Magento\Framework\View\Element\Template\Context;
 use Sapient\AccessWorldpay\Model\AccessWorldpayConfigProvider;
 use Sapient\AccessWorldpay\Helper\Data;
 
-/**
- * Description of SavedCardLink
- *
- * @author aatrai
- */
 class SavedCardLink extends \Magento\Framework\View\Element\Html\Link\Current
 {
+    /**
+     * @var $_scopeConfig
+     */
     protected $_scopeConfig = null;
+
+    /**
+     * Constructor
+     *
+     * @param \Magento\Backend\Block\Template\Context $context
+     * @param AccessWorldpayConfigProvider $config
+     * @param \Sapient\Worldpay\Helper\Data $helper
+     * @param DefaultPathInterface $defaultPath
+     * @param array $data
+     */
     public function __construct(
         Context $context,
         AccessWorldpayConfigProvider $config,
@@ -32,7 +40,12 @@ class SavedCardLink extends \Magento\Framework\View\Element\Html\Link\Current
         $this->config = $config;
         $this->helper = $helper;
     }
-    
+
+    /**
+     * Display Html
+     *
+     * @return string
+     */
     public function _toHtml()
     {
         
@@ -42,7 +55,11 @@ class SavedCardLink extends \Magento\Framework\View\Element\Html\Link\Current
             return '';
         }
     }
-    
+    /**
+     * Check Save Card TabTo Be Enabled
+     *
+     * @return string
+     */
     public function checkSaveCardTabToBeEnabled()
     {
         

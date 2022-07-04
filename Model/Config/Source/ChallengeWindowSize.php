@@ -7,6 +7,8 @@ namespace Sapient\AccessWorldpay\Model\Config\Source;
 class ChallengeWindowSize extends \Magento\Framework\App\Config\Value
 {
     /**
+     * ToOptionArray
+     *
      * @return array
      */
     public function toOptionArray()

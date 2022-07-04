@@ -13,7 +13,7 @@ use Magento\Framework\Exception\LocalizedException;
 class Request
 {
     /**
-     * @var \Sapient\AccessWorldpay\Model\Request\CurlRequest
+     * @var \Magento\Framework\HTTP\Client\Curl
      */
     protected $_request;
 
@@ -22,50 +22,76 @@ class Request
      */
     protected $_logger;
 
-    const CURL_POST = true;
-    const CURL_PUT = true;
-    const CURL_RETURNTRANSFER = true;
-    const CURL_NOPROGRESS = false;
-    const CURL_TIMEOUT = 60;
-    const CURL_VERBOSE = true;
-    const SUCCESS = 200;
+    /**
+     * @var CURL_POST
+     */
+    public const CURL_POST = true;
+
+    /**
+     * @var CURL_RETURNTRANSFER
+     */
+    public const CURL_RETURNTRANSFER = true;
+ 
+    /**
+     * @var CURL_NOPROGRESS
+     */
+    public const CURL_NOPROGRESS = false;
+
+    /**
+     * @var CURL_TIMEOUT
+     */
+    public const CURL_TIMEOUT = 60;
+    
+    /**
+     * @var CURL_VERBOSE
+     */
+    public const CURL_VERBOSE = true;
+    
+    /**
+     * @var SUCCESS
+     */
+    public const SUCCESS = 200;
 
     /**
      * Constructor
      *
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
-     * @param \Sapient\AccessWorldpay\Model\Request\CurlRequest $curlrequest
+     * @param \Magento\Framework\HTTP\Client\Curl $curl
      * @param \Sapient\AccessWorldpay\Helper\Data $helper
+     * @param \Sapient\AccessWorldpay\Helper\SendErrorReport $emailErrorReportHelper
      */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
-        \Sapient\AccessWorldpay\Model\Request\CurlRequest $curlrequest,
-        \Sapient\AccessWorldpay\Helper\Data $helper
+        \Magento\Framework\HTTP\Client\Curl $curl,
+        \Sapient\AccessWorldpay\Helper\Data $helper,
+        \Sapient\AccessWorldpay\Helper\SendErrorReport $emailErrorReportHelper
     ) {
         $this->_wplogger = $wplogger;
-        $this->curlrequest = $curlrequest;
+        $this->curlrequest = $curl;
         $this->helper = $helper;
+
+        $this->emailErrorReportHelper = $emailErrorReportHelper;
     }
      /**
       * Process the request
       *
-      * @param $quote
-      * @param $username
-      * @param $password
+      * @param object $orderCode
+      * @param string $username
+      * @param string $password
+      * @param string $url
+      * @param int $quote
       * @return SimpleXMLElement body
       * @throws Exception
       */
     public function sendRequest($orderCode, $username, $password, $url, $quote = null)
     {
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
             $url = $this->_getUrl();
         }
-       
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
-
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -79,23 +105,53 @@ class Request
             $request->setOption(CURLOPT_POSTFIELDS, $quote);
         }
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.payments-v6+json"]
+            ["Content-Type: application/vnd.worldpay.payments-v6+json",
+             "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+             "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"=>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE" =>
+                isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
-        //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
+        $logger->info('Sending additional headers as: ' . json_encode(["MERCHANT_ENTITY_REF"
+            =>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+             "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" =>
+                isset($pluginTrackerDetails['UPGRADE_DATES'])?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ], true));
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
 
-        $result = $request->execute();
-
+        $request->post($url, $quote);
+        $result = $request->getBody();
+        //$result = $request->execute();
+    
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
-            $information = $request->getInfo(CURLINFO_HEADER_OUT);
+            //$information = $request->getInfo(CURLINFO_HEADER_OUT);
+            $information = $request->getHeaders();
             $logger->info("**REQUEST HEADER START**");
-            $logger->info($information);
+            $logger->info(json_encode($information));
             $logger->info("**REQUEST HEADER ENDS**");
         }
 
@@ -109,7 +165,6 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -117,8 +172,20 @@ class Request
         $bits = explode("\r\n\r\n", $result);
         $body = array_pop($bits);
         $headers = implode("\r\n\r\n", $bits);
+        $jsonResponse = json_decode($body, true);
+        
+        /* Check Error */
+        $this->_checkErrorForEmailSend($request, $jsonResponse);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -138,7 +205,17 @@ class Request
         }
         return $xml;
     }
-    
+
+    /**
+     * Send apple pay request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param int $quote
+     * @return array
+     */
     public function sendApplePayRequest($orderCode, $username, $password, $url, $quote = null)
     {
        /*
@@ -195,17 +272,16 @@ class Request
         $logger->info($result);
         *
         */
-        
+
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
             $url = $this->_getUrl();
         }
-        
+
         $logger->info('Setting destination URL: ' . $url);
-        
-        $request->setUrl($url);
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -224,7 +300,7 @@ class Request
                 },
                 "instruction": {
                     "narrative": {
-                        "line1": "'.$quote['transactionReference'].'"
+                        "line1": "'.$this->helper->getNarrative().'"
                     },
                     "value": {
                         "currency": "'.$quote['instruction']['value']['currency'].'",
@@ -243,16 +319,32 @@ class Request
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.payments-v6+json"]
+            ["Content-Type: application/vnd.worldpay.payments-v6+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"=>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE" =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
         $request->setOption(CURLINFO_HEADER_OUT, true);
 
-        $result = $request->execute();
+        $request->post($url, $quote);
+        $result = $request->getBody();
+
+        //$result = $request->execute();
+
         //$logger->info(print_r($result,true));
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
-            $information = $request->getInfo(CURLINFO_HEADER_OUT);
+            //$information = $request->getInfo(CURLINFO_HEADER_OUT);
+            $information = $request->getHeaders();
             $logger->info("**REQUEST HEADER START**");
             $logger->info($information);
             $logger->info("**REQUEST HEADER ENDS**");
@@ -268,16 +360,22 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
+        
         $logger->info('Request successfully sent');
         $logger->info($result);
 
         // extract headers
         $bits = explode("\r\n\r\n", $result);
         $body = array_pop($bits);
-        $headers = implode("\r\n\r\n", $bits);
+        $headers = implode("\r\n\r\n", $bits); 
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+            $this->helper->setWorldpayAuthCookie($match[1]);
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -298,9 +396,20 @@ class Request
         return $xml;
         // @codingStandardsIgnoreEnd
     }
-    
+
+    /**
+     * Send DdcRequest
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param int $quote
+     * @return json
+     */
     public function sendDdcRequest($orderCode, $username, $password, $url, $quote = null)
     {
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
@@ -308,8 +417,6 @@ class Request
         }
 
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
-
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -323,26 +430,31 @@ class Request
             $request->setOption(CURLOPT_POSTFIELDS, $quote);
         }
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.verifications.customers-v2.hal+json"]
+            ["Content-Type: application/vnd.worldpay.verifications.customers-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
-
-        $result = $request->execute();
-
-//        // logging Headder for 3DS request to check Cookie.
-//        if ($this->helper->IsThreeDSRequest()) {
-//            $information = $request->getInfo(CURLINFO_HEADER_OUT);
-//            $logger->info("**REQUEST HEADER START**");
-//            $logger->info($information);
-//            $logger->info("**REQUEST HEADER ENDS**");
-//        }
-
+        $request->post($url, $quote);
+        $result = $request->getBody();
         if (!$result) {
             $logger->info('Request could not be sent.');
             $logger->info($result);
@@ -353,7 +465,6 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -363,6 +474,14 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -375,14 +494,23 @@ class Request
         return $jsonData;
     }
 
+    /**
+     * Get verified token request
+     *
+     * @param array $verifiedTokenRequest
+     * @param string $username
+     * @param string $password
+     * @return json
+     */
     public function getVerifiedToken($verifiedTokenRequest, $username, $password)
     {
+        $quote = null;
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         //$url = $this->_getUrl();
         $url = str_replace('/payments/authorizations', '/verifiedTokens/cardOnFile', $this->_getUrl());
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
         $logger->info('Initialising verified token request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -394,21 +522,38 @@ class Request
         $request->setOption(CURLOPT_SSL_VERIFYPEER, false);
         $request->setOption(CURLOPT_POSTFIELDS, $verifiedTokenRequest);
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json"]
+            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         $logger->info('Sending Json as: ' . $verifiedTokenRequest);
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
+        $request->post($url, $verifiedTokenRequest);
+        $result = $request->getBody();
 
-        $result = $request->execute();
+        //$result = $request->execute();
 
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
-            $information = $request->getInfo(CURLINFO_HEADER_OUT);
+            //$information = $request->getInfo(CURLINFO_HEADER_OUT);
+            $information = $request->getHeaders();
             $logger->info("**REQUEST HEADER START**");
             $logger->info($information);
             $logger->info("**REQUEST HEADER ENDS**");
@@ -424,8 +569,9 @@ class Request
                 'AccessWorldpay api service not available'
             );
         }
-        $httpCode = $request->getInfo(CURLINFO_HTTP_CODE);
-        $request->close();
+        $httpCode = $request->getStatus();
+        //$httpCode = $request->getInfo(CURLINFO_HTTP_CODE);
+       
         $logger->info('Request successfully sent for tokenisation ........................');
         $logger->info($result);
 
@@ -433,8 +579,18 @@ class Request
         $bits = explode("\r\n\r\n", $result);
         $body = array_pop($bits);
         $headers = implode("\r\n\r\n", $bits);
-
+        $jsonResponse = json_decode($body, true);
+        
+        /* Check Error */
+        $this->_checkErrorForEmailSend($verifiedTokenRequest, $jsonResponse);
+        
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+            $this->helper->setWorldpayAuthCookie($match[1]);
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -447,14 +603,23 @@ class Request
         $body = json_encode($verifiedTokenResponseToArray, true);
         return $body;
     }
-    
+
+    /**
+     * Get Session href for direct
+     *
+     * @param string $url
+     * @param string $params
+     * @param string $username
+     * @param string $password
+     * @return json
+     */
     public function getSessionHrefForDirect($url, $params, $username, $password)
     {
+        $quote = null;
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
-
         $logger->info('Initialising session href request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -466,18 +631,31 @@ class Request
         $request->setOption(CURLOPT_SSL_VERIFYPEER, false);
         $request->setOption(CURLOPT_POSTFIELDS, $params);
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json"]
+            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $params);
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
-
-        $result = $request->execute();
-
+        $request->post($url, $quote);
+        $result = $request->getBody();
         if (!$result) {
             $logger->info('Request could not be sent.');
             $logger->info($result);
@@ -488,8 +666,8 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $httpCode = $request->getInfo(CURLINFO_HTTP_CODE);
-        $request->close();
+        $httpCode = $request->getStatus();
+       // $httpCode = $request->getInfo(CURLINFO_HTTP_CODE);
         $logger->info($result);
 
         // extract headers
@@ -498,6 +676,12 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+            $this->helper->setWorldpayAuthCookie($match[1]);
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -510,11 +694,19 @@ class Request
         $body = json_encode($sessionHrefToArray, true);
         return $body;
     }
-    
-    //get detailed verified token
+
+    /**
+     * Get detailed verified token
+     *
+     * @param string $verifiedToken
+     * @param string $username
+     * @param string $password
+     * @return json
+     */
     public function getDetailedVerifiedToken($verifiedToken, $username, $password)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $curl = curl_init();
 
@@ -529,11 +721,25 @@ class Request
           CURLOPT_CUSTOMREQUEST => "GET",
           CURLOPT_USERPWD => $username.':'.$password,
           CURLOPT_HTTPHEADER => [
-            "Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json"
+            "Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"=>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
           ],
         ]);
         $response = curl_exec($curl);
+
         curl_close($curl);
+
         if (!$response) {
             $logger->info('Request could not be sent.');
             $logger->info(
@@ -545,15 +751,23 @@ class Request
         }
         $logger->info('Request successfully sent for Detailed Verified Tokenisation ..........');
         $logger->info($response);
-        
+
         return $response;
         // @codingStandardsIgnoreEnd
     }
-    
-    //get token details for brand
+
+    /**
+     * Get detailed token for brand
+     *
+     * @param string $verifiedToken
+     * @param string $username
+     * @param string $password
+     * @return json
+     */
     public function getDetailedTokenForBrand($verifiedToken, $username, $password)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $curl = curl_init();
 
@@ -568,7 +782,20 @@ class Request
           CURLOPT_CUSTOMREQUEST => "GET",
           CURLOPT_USERPWD => $username.':'.$password,
           CURLOPT_HTTPHEADER => [
-            "Content-Type: application/vnd.worldpay.tokens-v2.hal+json"
+            "Content-Type: application/vnd.worldpay.tokens-v2.hal+json",
+               "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                ?$pluginTrackerDetails['UPGRADE_DATES']:""
           ],
         ]);
         $response = curl_exec($curl);
@@ -584,15 +811,23 @@ class Request
         }
         $logger->info('Request successfully sent for Detailed Token ........................');
         $logger->info($response);
-        
+
         return $response;
         // @codingStandardsIgnoreEnd
     }
-   
-    //get detailed verified token
+
+    /**
+     *  Get token enquery
+     *
+     * @param string $verifiedToken
+     * @param string $username
+     * @param string $password
+     */
+
     public function getTokenInquiry($verifiedToken, $username, $password)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $curl = curl_init();
         curl_setopt_array($curl, [
@@ -606,7 +841,20 @@ class Request
           CURLOPT_CUSTOMREQUEST => "GET",
           CURLOPT_USERPWD => $username.':'.$password,
           CURLOPT_HTTPHEADER => [
-            "Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json"
+            "Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
           ],
         ]);
 
@@ -624,14 +872,29 @@ class Request
         }
 
         $logger->info('Request successfully sent for getTokenInquiry from My Account................');
+        $bits = explode("\r\n\r\n", $response);
+        $body = array_pop($bits);
+        $jsonResponse = json_decode($body, true);
+
+        /* Check Error */
+        $this->_checkErrorForEmailSend($verifiedToken, $jsonResponse);
+
         $logger->info($response);
         return $response;
         // @codingStandardsIgnoreEnd
     }
-    
+
+    /**
+     * Get token delete
+     *
+     * @param string $deleteTokenUrl
+     * @param string $username
+     * @param string $password
+     */
     public function getTokenDelete($deleteTokenUrl, $username, $password)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $logger->info($deleteTokenUrl);
         $ch = curl_init();
@@ -640,7 +903,21 @@ class Request
         curl_setopt(
             $ch,
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json"]
+            ["Content-Type: application/vnd.worldpay.verified-tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES"=> isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         curl_setopt($ch, CURLOPT_USERPWD, $username.':'.$password);
@@ -654,8 +931,12 @@ class Request
         return $httpcode;
         // @codingStandardsIgnoreEnd
     }
+
     /**
      * Censors sensitive data before outputting to the log file
+     *
+     * @param int $quote
+     * @return json
      */
     protected function _getObfuscatedXmlLog($quote)
     {
@@ -667,6 +948,8 @@ class Request
 
     /**
      * Get URL of merchant site based on environment mode
+     *
+     * @return string
      */
     private function _getUrl()
     {
@@ -677,6 +960,8 @@ class Request
     }
 
     /**
+     * Get Request
+     *
      * @return object
      */
     private function _getRequest()
@@ -686,19 +971,21 @@ class Request
         }
         return $this->_request;
     }
-    
+
      /**
       * Process the request
       *
-      * @param $quote
-      * @param $username
-      * @param $password
+      * @param string $username
+      * @param string $password
+      * @param string $url
+      * @param INT $quote
       * @return SimpleXMLElement body
       * @throws Exception
       */
     public function putRequest($username, $password, $url, $quote = null)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $logger->info('Setting destination URL: ' . $url);
         $logger->info('Initialising request');
@@ -708,7 +995,21 @@ class Request
         curl_setopt(
             $ch,
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.tokens-v2.hal+json"]
+            ["Content-Type: application/vnd.worldpay.tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         curl_setopt($ch, CURLOPT_USERPWD, $username.':'.$password);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $quote);
@@ -727,13 +1028,16 @@ class Request
         $body = array_pop($resultArray);
         $logger->info(print_r($body, true));
         $bodyArray = json_decode($body, true);
+        
+        /* Check Error */
+        $this->_checkErrorForEmailSend($result, $bodyArray);
         curl_close($ch);
         if ($httpcode == 204) {
             return $httpcode;
         } else {
             return $bodyArray;
         }
-        
+
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
             $information = $request->getInfo(CURLINFO_HEADER_OUT);
@@ -752,7 +1056,7 @@ class Request
                 __('AccessWorldpay api service not available for put request')
             );
         }
-        $request->close();
+        
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -762,6 +1066,14 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -774,7 +1086,16 @@ class Request
         return $xml;
         // @codingStandardsIgnoreEnd
     }
-    
+
+     /**
+      * Array to xml
+      *
+      * @param array $array
+      * @param string $xml
+      * @param string $orderCode
+      * @return SimpleXMLElement body
+      * @throws Exception
+      */
     public function _array2xml($array, $xml = false, $orderCode = null)
     {
         if ($xml === false) {
@@ -797,6 +1118,10 @@ class Request
 
     /**
      * Resolve Token Conflict
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $url
      */
     public function resolveConflict($username, $password, $url)
     {
@@ -834,17 +1159,35 @@ class Request
 
     /**
      * Get Conflict Detail
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $url
      */
     public function getConflictDetails($username, $password, $url)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
         curl_setopt($ch, CURLOPT_USERPWD, $username.':'.$password);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 "Content-Type: application/vnd.worldpay.tokens-v2.hal+json",
-                "Accept: application/vnd.worldpay.tokens-v2.hal+json"
+                "Accept: application/vnd.worldpay.tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
               ]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         /*SSL verification false*/
@@ -865,10 +1208,17 @@ class Request
 
     /**
      * Resolve Cardholder name Conflict
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param array $data
      */
+
     public function resolveConflictData($username, $password, $url, $data)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $this->_wplogger->info('Conflict Data'.$data);
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -876,7 +1226,20 @@ class Request
         curl_setopt($ch, CURLOPT_USERPWD, $username.':'.$password);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 "Content-Type: application/vnd.worldpay.tokens-v2.hal+json",
-                "Accept: application/vnd.worldpay.tokens-v2.hal+json"
+                "Accept: application/vnd.worldpay.tokens-v2.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
               ]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         /*SSL verification false*/
@@ -889,7 +1252,16 @@ class Request
         return $httpCode;
         // @codingStandardsIgnoreEnd
     }
-    
+
+    /**
+     * Send saved card cardOn file verification request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param int $quote
+     */
     public function sendSavedCardCardOnFileVerificationRequest(
         $orderCode,
         $username,
@@ -898,6 +1270,7 @@ class Request
         $quote = null
     ) {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
@@ -905,8 +1278,6 @@ class Request
         }
 
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
-
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -920,18 +1291,34 @@ class Request
             $request->setOption(CURLOPT_POSTFIELDS, $quote);
         }
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
             ["Content-Type: application/vnd.worldpay.verifications.accounts-v5+json",
-            "Accept: application/vnd.worldpay.verifications.accounts-v5+json"]
+            "Accept: application/vnd.worldpay.verifications.accounts-v5+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
-
-        $result = $request->execute();
+        $request->post($url, $quote);
+        $result = $request->getBody();
+        
+        //$result = $request->execute();
 
         if (!$result) {
             $logger->info('Request could not be sent.');
@@ -943,7 +1330,7 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
+       
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -953,6 +1340,12 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+            $this->helper->setWorldpayAuthCookie($match[1]);
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -962,19 +1355,22 @@ class Request
         return $body;
         // @codingStandardsIgnoreEnd
     }
-    
-         /**
-          * Process the request
-          *
-          * @param $quote
-          * @param $username
-          * @param $password
-          * @return SimpleXMLElement body
-          * @throws Exception
-          */
+
+    /**
+     * Process the request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param int $quote
+     * @return SimpleXMLElement body
+     * @throws Exception
+     */
     public function savedCardSendRequest($orderCode, $username, $password, $url, $quote = null)
     {
         // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
@@ -982,8 +1378,6 @@ class Request
         }
 
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
-
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -997,21 +1391,38 @@ class Request
             $request->setOption(CURLOPT_POSTFIELDS, $quote);
         }
         $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
-        
+
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.payments-v6+json"]
+            ["Content-Type: application/vnd.worldpay.payments-v6+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE" 
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
 
         $request->setOption(CURLINFO_HEADER_OUT, true);
-
-        $result = $request->execute();
+        $request->post($url, $quote);
+        $result = $request->getBody();
+        
+        //$result = $request->execute();
 
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
-            $information = $request->getInfo(CURLINFO_HEADER_OUT);
+            //$information = $request->getInfo(CURLINFO_HEADER_OUT);
+            $information = $request->getHeaders();
             $logger->info("**REQUEST HEADER START**");
             $logger->info($information);
             $logger->info("**REQUEST HEADER ENDS**");
@@ -1027,7 +1438,7 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
+        
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -1035,30 +1446,52 @@ class Request
         $bits = explode("\r\n\r\n", $result);
         $body = array_pop($bits);
         $headers = implode("\r\n\r\n", $bits);
+        $jsonResponse = json_decode($body, true);
+        
+        /* Check Error */
+        $this->_checkErrorForEmailSend($request, $jsonResponse);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
                 $logger->info('Cookie Get: ' . $match[1]);
                 $this->helper->setAccessWorldpayAuthCookie($match[1]);
         }
-        
+
         $jsonData = json_decode($body, true);
         return $jsonData;
         // @codingStandardsIgnoreEnd
     }
 
+    /**
+     * Send GooglePay Request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param string $quote
+     * @return json
+     */
     public function sendGooglePayRequest($orderCode, $username, $password, $url, $quote = null)
     {
     // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $request = $this->_getRequest();
         $logger = $this->_wplogger;
         if (!$url) {
             $url = $this->_getUrl();
         }
         $logger->info('Setting destination URL: ' . $url);
-        $request->setUrl($url);
         $logger->info('Initialising request');
         $request->setOption(CURLOPT_POST, self::CURL_POST);
         $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
@@ -1096,12 +1529,27 @@ class Request
         $request->setOption(CURLOPT_HEADER, true);
         $request->setOption(
             CURLOPT_HTTPHEADER,
-            ["Content-Type: application/vnd.worldpay.payments-v6+json"]
+            ["Content-Type: application/vnd.worldpay.payments-v6+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
         );
         //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
         $request->setOption(CURLINFO_HEADER_OUT, true);
+        $request->post($url, $quote);
+        $result = $request->getBody();
 
-        $result = $request->execute();
         //$logger->info(print_r($result,true));
         // logging Headder for 3DS request to check Cookie.
         if ($this->helper->isThreeDSRequest()) {
@@ -1121,7 +1569,6 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        $request->close();
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -1131,6 +1578,14 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
@@ -1151,39 +1606,73 @@ class Request
         return $xml;
         // @codingStandardsIgnoreEnd
     }
-    
+
     /**
      * Process the request
      *
-     * @param $quote
-     * @param $username
-     * @param $password
-     * @return SimpleXMLElement body
-     * @throws Exception
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param string $quote
+     * @return json
      */
     public function sendEventRequest($orderCode, $username, $password, $url, $quote = null)
     {
        // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
         $logger = $this->_wplogger;
         $logger->info('Setting destination URL: ' . $url);
         $logger->info('Initialising request');
-        
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-          CURLOPT_URL => $url,
-          CURLOPT_RETURNTRANSFER => true,
-          CURLOPT_ENCODING => "",
-          CURLOPT_MAXREDIRS => 10,
-          CURLOPT_TIMEOUT => 0,
-          CURLOPT_FOLLOWLOCATION => true,
-          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-          CURLOPT_CUSTOMREQUEST => "GET",
-          CURLOPT_USERPWD => $username.':'.$password,
-          CURLOPT_HTTPHEADER => [
-            "Content-Type: application/vnd.worldpay.payments-v6+json"
-          ],
-        ]);
 
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_setopt($curl, CURLOPT_ENCODING, "");
+        curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 0);
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($curl, CURLOPT_USERPWD, $username.':'.$password);
+        if($quote == 'ACH_DIRECT_DEBIT-SSL'){
+            curl_setopt($curl, CURLOPT_HTTPHEADER, [
+                "Content-Type: application/vnd.worldpay.pay-direct-v1+json",
+                "Accept: application/vnd.worldpay.pay-direct-v1+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+              ]);
+        }else{
+            curl_setopt($curl, CURLOPT_HTTPHEADER, [
+                "Content-Type: application/vnd.worldpay.payments-v6+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+              ]);
+        }
+
+        //$logger->info(print_r(headers_list(),true));
         $result = curl_exec($curl);
         curl_close($curl);
 
@@ -1197,7 +1686,6 @@ class Request
                 __('AccessWorldpay api service not available')
             );
         }
-        //$request->close();
         $logger->info('Request successfully sent');
         $logger->info($result);
 
@@ -1207,10 +1695,225 @@ class Request
         $headers = implode("\r\n\r\n", $bits);
 
         // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
         if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
             // Keep a hold of the cookie returned incase we need to send a
             // second order message after 3dSecure check
                 $logger->info('Cookie Get: ' . $match[1]);
+        }
+        //return $body;
+        $jsonData = json_decode($body, true);
+        //$logger->info('Body'.$jsonData);
+        try {
+            if(isset($jsonData['errorName'])){
+                $logger->info('inside try block in Request.php : if block  +++++++++++++');
+                throw new \Magento\Framework\Exception\LocalizedException(
+                __($jsonData['message']));
+            }else{
+                $xml = $this->_array2xml($jsonData, false, $orderCode);
+                return $xml;
+            }
+        } catch (Exception $e) {
+            $logger->error($e->getMessage());
+            if($e->getMessage() == 'An error has occurred.'){
+                throw new \Magento\Framework\Exception\LocalizedException(
+                __($e->getMessage())
+            );
+            }else{
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __($this->helper->getCreditCardSpecificException('CCAM18'))
+            );}
+        }
+
+        // @codingStandardsIgnoreEnd
+    }
+
+    /**
+     * Send exemption request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param string $quote
+     * @return json
+     */
+    public function sendExemptionRequest($orderCode, $username, $password, $url, $quote = null)
+    {
+        // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
+        $request = $this->_getRequest();
+        $logger = $this->_wplogger;
+        if (!$url) {
+            $url = $this->_getUrl();
+        }
+
+        $logger->info('Setting destination URL: ' . $url);
+
+        $logger->info('Initialising request');
+        $request->setOption(CURLOPT_POST, self::CURL_POST);
+        $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
+        $request->setOption(CURLOPT_NOPROGRESS, self::CURL_NOPROGRESS);
+        $request->setOption(CURLOPT_TIMEOUT, self::CURL_TIMEOUT);
+        $request->setOption(CURLOPT_VERBOSE, self::CURL_VERBOSE);
+        /*SSL verification false*/
+        $request->setOption(CURLOPT_SSL_VERIFYHOST, false);
+        $request->setOption(CURLOPT_SSL_VERIFYPEER, false);
+        if ($quote) {
+            $request->setOption(CURLOPT_POSTFIELDS, $quote);
+        }
+        $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
+
+        $request->setOption(CURLOPT_HEADER, true);
+        $request->setOption(
+            CURLOPT_HTTPHEADER,
+            ["Content-Type: application/vnd.worldpay.exemptions-v1.hal+json",
+             "Accept: application/vnd.worldpay.exemptions-v1.hal+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
+        );
+
+        $request->setOption(CURLINFO_HEADER_OUT, true);
+        $request->post($url, $quote);
+        $result = $request->getBody();
+
+        if (!$result) {
+            $logger->info('Request could not be sent.');
+            $logger->info($result);
+            $logger->info(
+                '########### END OF REQUEST - FAILURE WHILST TRYING TO SEND REQUEST ###########'
+            );
+            throw new \Magento\Framework\Exception\LocalizedException(
+                'AccessWorldpay api service not available'
+            );
+        }
+
+        $logger->info('Request successfully sent');
+        $logger->info($result);
+
+        // extract headers
+        $bits = explode("\r\n\r\n", $result);
+        $body = array_pop($bits);
+        $headers = implode("\r\n\r\n", $bits);
+
+        $jsonData = json_decode($body, true);
+        return $jsonData;
+    // @codingStandardsIgnoreEnd
+    }
+
+    /**
+     * Send ACH order request
+     *
+     * @param object $orderCode
+     * @param string $username
+     * @param string $password
+     * @param string $url
+     * @param string $quote
+     * @return json
+     */
+    public function sendACHOrderRequest($orderCode, $username, $password, $url, $quote = null)
+    {
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
+        $request = $this->_getRequest();
+        $logger = $this->_wplogger;
+        if (!$url) {
+            $url = $this->_getUrl();
+        }
+
+        $logger->info('Setting destination URL: ' . $url);
+
+        $logger->info('Initialising request');
+        $request->setOption(CURLOPT_POST, self::CURL_POST);
+        $request->setOption(CURLOPT_RETURNTRANSFER, self::CURL_RETURNTRANSFER);
+        $request->setOption(CURLOPT_NOPROGRESS, self::CURL_NOPROGRESS);
+        $request->setOption(CURLOPT_TIMEOUT, self::CURL_TIMEOUT);
+        $request->setOption(CURLOPT_VERBOSE, self::CURL_VERBOSE);
+        /*SSL verification false*/
+        $request->setOption(CURLOPT_SSL_VERIFYHOST, false);
+        $request->setOption(CURLOPT_SSL_VERIFYPEER, false);
+        if ($quote) {
+            $request->setOption(CURLOPT_POSTFIELDS, $quote);
+        }
+        $request->setOption(CURLOPT_USERPWD, $username.':'.$password);
+
+        $request->setOption(CURLOPT_HEADER, true);
+        $request->setOption(
+            CURLOPT_HTTPHEADER,
+            ["Content-Type: application/vnd.worldpay.pay-direct-v1+json",
+             "Accept: application/vnd.worldpay.pay-direct-v1+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+            ]
+        );
+        //$logger->info('Sending Json as: ' . $this->_getObfuscatedXmlLog($quote));
+
+        $request->setOption(CURLINFO_HEADER_OUT, true);
+        $request->post($url, $quote);
+        $result = $request->getBody();
+
+        if (!$result) {
+            $logger->info('Request could not be sent.');
+            $logger->info($result);
+            $logger->info(
+                '########### END OF REQUEST - FAILURE WHILST TRYING TO SEND REQUEST ###########'
+            );
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('AccessWorldpay api service not available')
+            );
+        }
+ 
+        $logger->info('Request successfully sent');
+        $logger->info($result);
+
+        // extract headers
+        $bits = explode("\r\n\r\n", $result);
+        $body = array_pop($bits);
+        $headers = implode("\r\n\r\n", $bits);
+
+        // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
+        if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+                $logger->info('Cookie Get: ' . $match[1]);
+                $this->helper->setAccessWorldpayAuthCookie($match[1]);
         }
         //return $body;
         $jsonData = json_decode($body, true);
@@ -1224,6 +1927,142 @@ class Request
             );
         }
         return $xml;
+    }
+
+        /**
+         * Process the request
+         *
+         * @param object $orderCode
+         * @param string $username
+         * @param string $password
+         * @param string $url
+         * @param string $quote
+         * @return json
+         */
+    public function sendReversalRequest($orderCode, $username, $password, $url, $quote = null)
+    {
+       // @codingStandardsIgnoreStart
+        $pluginTrackerDetails = $this->helper->getPluginTrackerdetails();
+        $logger = $this->_wplogger;
+        $logger->info('Setting destination URL: ' . $url);
+        $logger->info('Initialising request');
+
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($curl, CURLOPT_ENCODING, "");
+        curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 0);
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($curl, CURLOPT_USERPWD, $username.':'.$password);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            "Content-Type: application/vnd.worldpay.pay-direct-v1+json",
+            "Accept: application/vnd.worldpay.pay-direct-v1+json",
+                "MERCHANT_ENTITY_REF"=>$pluginTrackerDetails['MERCHANT_ENTITY_REF'],
+                "MERCHANT_ID" => $pluginTrackerDetails['MERCHANT_ID'],
+                "MAGENTO_EDITION"=>$pluginTrackerDetails['MAGENTO_EDITION'],
+                "MAGENTO_VERSION"=>$pluginTrackerDetails['MAGENTO_VERSION'],
+                "PHP_VERSION"=> $pluginTrackerDetails['PHP_VERSION'],
+                "CURRENT_WORLDPAY_PLUGIN_VERSION"
+                    =>isset($pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION'])?
+                $pluginTrackerDetails['CURRENT_WORLDPAY_PLUGIN_VERSION']:"",
+                "WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE"
+                    =>isset($pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE'])?
+                $pluginTrackerDetails['WORLDPAY_PLUGIN_VERSION_USED_TILL_DATE']:"",
+                "UPGRADE_DATES" => isset($pluginTrackerDetails['UPGRADE_DATES'])
+                    ?$pluginTrackerDetails['UPGRADE_DATES']:""
+        ]);
+
+        $result = curl_exec($curl);
+        curl_close($curl);
+
+        if (!$result) {
+            $logger->info('Request could not be sent.');
+            $logger->info($result);
+            $logger->info(
+                '########### END OF REQUEST - FAILURE WHILST TRYING TO SEND REQUEST ###########'
+            );
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('AccessWorldpay api service not available ')
+            );
+        }
+        $logger->info('Request successfully sent');
+        $logger->info($result);
+
+        // extract headers
+        $bits = explode("\r\n\r\n", $result);
+        $body = array_pop($bits);
+        $headers = implode("\r\n\r\n", $bits);
+
+        // Extracting Cookie from Response Header.
+        if (preg_match("/set-cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+            $logger->info('Cookie Get: ' . $match[1]);
+
+            $this->helper->setWorldpayAuthCookie($match[1]);
+
+        }
+        if (preg_match("/Set-Cookie: (.+?)([\r\n]|$)/", $headers, $match)) {
+            // Keep a hold of the cookie returned incase we need to send a
+            // second order message after 3dSecure check
+                $logger->info('Cookie Get: ' . $match[1]);
+        }
+        //return $body;
+        $jsonData = json_decode($body, true);
+        //$logger->info('Body'.$jsonData);
+        try {
+            if(isset($jsonData['errorName'])){
+                throw new \Magento\Framework\Exception\LocalizedException(
+                __($jsonData['message']));
+            }else{
+                $xml = $this->_array2xml($jsonData, false, $orderCode);
+                return $xml;
+            }
+        } catch (Exception $e) {
+            $logger->error($e->getMessage());
+            if($e->getMessage() == 'An error has occurred.'){
+                throw new \Magento\Framework\Exception\LocalizedException(
+                __($e->getMessage())
+            );
+            }else{
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __($this->helper->getCreditCardSpecificException('CCAM18'))
+            );}
+        }
         // @codingStandardsIgnoreEnd
+    }
+
+    /**
+     * Check error for send email
+     *
+     * @param string $request
+     * @param array $response
+     * @return void
+     */
+    public function _checkErrorForEmailSend($request, $response)
+    {
+        $this->_wplogger->info('checking Error for email send..');
+        if (isset($response['errorName'])) {
+            $this->emailErrorReportHelper->sendErrorReport([
+                'request'=>json_encode($request),
+                'response'=>json_encode($response),
+                'error_code'=>$response['errorName'],
+                'error_message'=>$response['message']
+            ]);
+        }
+        if (isset($response['description']) && isset($response['outcome'])) {
+            if ($response['outcome'] == 'not verified') {
+                $this->emailErrorReportHelper->sendErrorReport([
+                    'request'=>json_encode($request),
+                    'response'=>json_encode($response),
+                    'error_code'=>$response['code'],
+                    'error_message'=>$response['description']
+                ]);
+            }
+        }
+        return true;
     }
 }

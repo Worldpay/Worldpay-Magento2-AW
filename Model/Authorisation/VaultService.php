@@ -17,7 +17,26 @@ use Exception;
 
 class VaultService extends \Magento\Framework\DataObject
 {
+
+    /**
+     * @var \Magento\Checkout\Model\Session
+     */
     protected $checkoutSession;
+
+    /**
+     * VaultService constructor
+     *
+     * @param \Sapient\AccessWorldpay\Model\Mapping\Service $mappingservice
+     * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest
+     * @param \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse
+     * @param \Sapient\AccessWorldpay\Model\Payment\UpdateAccessWorldpaymentFactory $updateWorldPayPayment
+     * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice
+     * @param \Magento\Checkout\Model\Session $checkoutSession
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param \Sapient\AccessWorldpay\Helper\Registry $registryhelper
+     * @param \Magento\Customer\Model\Session $customerSession
+     */
     public function __construct(
         \Sapient\AccessWorldpay\Model\Mapping\Service $mappingservice,
         \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest,
@@ -27,7 +46,8 @@ class VaultService extends \Magento\Framework\DataObject
         \Magento\Checkout\Model\Session $checkoutSession,
         \Sapient\AccessWorldpay\Helper\Data $worldpayHelper,
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
-        \Sapient\AccessWorldpay\Helper\Registry $registryhelper
+        \Sapient\AccessWorldpay\Helper\Registry $registryhelper,
+        \Magento\Customer\Model\Session $customerSession
     ) {
         $this->mappingservice = $mappingservice;
         $this->paymentservicerequest = $paymentservicerequest;
@@ -38,7 +58,19 @@ class VaultService extends \Magento\Framework\DataObject
         $this->worldpayHelper = $worldpayHelper;
         $this->wplogger = $wplogger;
         $this->registryhelper = $registryhelper;
+        $this->customerSession = $customerSession;
     }
+
+    /**
+     * Handles provides authorization data for redirect
+     *
+     * @param MageOrder $mageOrder
+     * @param Quote $quote
+     * @param string $orderCode
+     * @param string $orderStoreId
+     * @param array $paymentDetails
+     * @param Payment $payment
+     */
     public function authorizePayment(
         $mageOrder,
         $quote,
@@ -55,7 +87,11 @@ class VaultService extends \Magento\Framework\DataObject
                 $orderStoreId,
                 $paymentDetails
             );
-            
+            $this->checkoutSession->setauthenticatedOrderId($mageOrder->getIncrementId());
+            if ($this->worldpayHelper->isExemptionEngineEnable()) {
+                $exemptionData = $this->paymentservicerequest->sendExemptionAssesmentRequest($directOrderParams) ;
+                $directOrderParams['paymentDetails']['exemptionResult'] = $exemptionData;
+            }
             $this->checkoutSession->setDirectOrderParams($directOrderParams);
             $payment->setIsTransactionPending(1);
             $threeDSecureConfig = $this->get3DS2ConfigValues();
@@ -85,10 +121,23 @@ class VaultService extends \Magento\Framework\DataObject
                     $payment
                 );
                 $this->_applyPaymentUpdate($directResponse, $payment);
+                //save Exemption data
+                if (!empty($this->customerSession->getExemptionData())) {
+                    $this->wplogger->info(" Save Exemption data................");
+                    $exemptionData = $this->customerSession->getExemptionData();
+                    $this->customerSession->unsExemptionData();
+                    $this->updateWorldPayPayment->create()->saveExemptionData($exemptionData);
+                }
             }
         }
     }
     
+    /**
+     * Check error
+     *
+     * @param SimpleXmlElement $response
+     * @throw Exception
+     */
     public function checkforError($response)
     {
         $responseXml = $response->getXml();
@@ -100,6 +149,12 @@ class VaultService extends \Magento\Framework\DataObject
         return false;
     }
 
+    /**
+     * Apply payment update
+     *
+     * @param \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse
+     * @param Payment $payment
+     */
     private function _applyPaymentUpdate(
         \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse,
         $payment
@@ -109,6 +164,14 @@ class VaultService extends \Magento\Framework\DataObject
         $this->_abortIfPaymentError($paymentUpdate);
     }
     
+    /**
+     * Capture the payment
+     *
+     * @param MageOrder $mageOrder
+     * @param Quote $quote
+     * @param mixed $response
+     * @param Payment $payment
+     */
     public function capturePayment(
         $mageOrder,
         $quote,
@@ -120,6 +183,14 @@ class VaultService extends \Magento\Framework\DataObject
         $this->_applyPaymentUpdate($directResponse, $payment);
     }
     
+    /**
+     * Refund the payment
+     *
+     * @param MageOrder $mageOrder
+     * @param Quote $quote
+     * @param mixed $response
+     * @param Payment $payment
+     */
     public function refundPayment(
         $mageOrder,
         $quote,
@@ -130,6 +201,11 @@ class VaultService extends \Magento\Framework\DataObject
         $this->_applyPaymentUpdate($directResponse, $payment);
     }
     
+    /**
+     * Abort if payment error
+     *
+     * @param Object $paymentUpdate
+     */
     private function _abortIfPaymentError($paymentUpdate)
     {
 
@@ -152,7 +228,11 @@ class VaultService extends \Magento\Framework\DataObject
         }
     }
     
-    // get 3ds2 params from the configuration and set to checkout session
+    /**
+     * Get 3ds2 params from the configuration and set to checkout session
+     *
+     * @return array
+     */
     public function get3DS2ConfigValues()
     {
         $data = [];

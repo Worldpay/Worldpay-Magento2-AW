@@ -37,6 +37,9 @@ class Error extends \Magento\Framework\App\Action\Action
         return parent::__construct($context);
     }
 
+    /**
+     * Execute
+     */
     public function execute()
     {
         $this->wplogger->info('worldpay returned error url');
@@ -50,6 +53,11 @@ class Error extends \Magento\Framework\App\Action\Action
         return $this->resultRedirectFactory->create()->setPath('checkout/cart', ['_current' => true]);
     }
 
+    /**
+     * GetErrorNoticeForOrder
+     *
+     * @param string $order
+     */
     private function _getErrorNoticeForOrder($order)
     {
         return __('Order #'.$order->getIncrementId().' Failed due to unrecoverable error');

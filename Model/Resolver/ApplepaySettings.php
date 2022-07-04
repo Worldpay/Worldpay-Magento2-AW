@@ -12,13 +12,26 @@ use Magento\Framework\GraphQl\Config\Element\Field;
 
 class ApplepaySettings implements ResolverInterface
 {
-   
+   /**
+    * Constructor
+    *
+    * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+    */
     public function __construct(
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
     ) {
         $this->scopeConfig = $scopeConfig;
     }
-   
+   /**
+    * Resolver
+    *
+    * @param Field $field
+    * @param Context $context
+    * @param ResolveInfo $info
+    * @param array $value
+    * @param array $args
+    * @return array
+    */
     public function resolve(
         Field $field,
         $context,

@@ -48,6 +48,9 @@ class Cancel extends \Magento\Framework\App\Action\Action
         return parent::__construct($context);
     }
 
+    /**
+     * Execute
+     */
     public function execute()
     {
 
@@ -68,6 +71,11 @@ class Cancel extends \Magento\Framework\App\Action\Action
         return $this->resultRedirectFactory->create()->setPath('checkout/cart', ['_current' => true]);
     }
 
+    /**
+     * GetCancellationNoticeForOrder
+     *
+     * @param string $order
+     */
     private function _getCancellationNoticeForOrder($order)
     {
 
@@ -80,6 +88,12 @@ class Cancel extends \Magento\Framework\App\Action\Action
         return $message;
     }
 
+    /**
+     * ApplyPaymentUpdate
+     *
+     * @param string $paymentState
+     * @param string $order
+     */
     private function _applyPaymentUpdate($paymentState, $order)
     {
         try {

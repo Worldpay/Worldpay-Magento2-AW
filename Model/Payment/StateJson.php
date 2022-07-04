@@ -7,12 +7,16 @@ namespace Sapient\AccessWorldpay\Model\Payment;
 /**
  * Reading xml
  */
-class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
+class StateJson implements \Sapient\AccessWorldpay\Model\Payment\StateInterface
 {
+    /**
+     * @var string $_xml
+     */
     private $_xml;
     /**
      * Constructor
-     * @param $xml
+     *
+     * @param string $xml
      */
     public function __construct($xml)
     {
@@ -21,6 +25,7 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
 
     /**
      * Retrive ordercode from xml
+     *
      * @return string
      */
     public function getOrderCode()
@@ -34,6 +39,7 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
 
     /**
      * Retrive ordercode from xml
+     *
      * @return string
      */
     public function getPaymentStatus()
@@ -45,6 +51,7 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
 
     /**
      * Retrive status node from xml
+     *
      * @return xml
      */
     private function _getStatusNode()
@@ -56,13 +63,14 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
         } elseif (isset($this->_xml->eventDetails->type)) {
             return strtoupper($this->_xml->eventDetails->type);
         }
-
         
         return $this->_xml->outcome;
     }
     
     /**
      * Retrive journal reference from xml
+     *
+     * @param string $state
      * @return string
      */
     public function getJournalReference($state)
@@ -82,7 +90,13 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
         }
         return false;
     }
-    
+
+    /**
+     * Retrive payment links from xml
+     *
+     * @return string
+     */
+        
     public function getLinks()
     {
         if (isset($this->_xml->_links)) {
@@ -97,11 +111,23 @@ class StateJson implements \Sapient\AccessWorldpay\Model\Payment\State
         return false;
     }
     
+    /**
+     * Get Oms links
+     *
+     * @param string $link
+     * @return string $link
+     */
     public function getOmsUrls($link)
     {
         return $link->href;
     }
     
+    /**
+     * Formate and return events Status
+     *
+     * @param string $statusNode
+     * @return string $statusNode
+     */
     public function formattedStatusFromEvents($statusNode)
     {
         switch ($statusNode) {

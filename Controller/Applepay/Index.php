@@ -9,6 +9,7 @@ use Magento\Framework\View\Result\PageFactory;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Exception;
+use Laminas\Uri\UriFactory;
 use Magento\Framework\Controller\ResultFactory;
 
 class Index extends \Magento\Framework\App\Action\Action
@@ -16,7 +17,11 @@ class Index extends \Magento\Framework\App\Action\Action
     /**
      * @var Magento\Framework\View\Result\PageFactory
      */
-   
+    /**
+     * @var $fileDriver
+     */
+    protected $fileDriver;
+
     /**
      * Constructor
      *
@@ -26,6 +31,7 @@ class Index extends \Magento\Framework\App\Action\Action
      * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\App\Request\Http $request
+     * @param \Magento\Framework\Filesystem\Driver\file $fileDriver
      */
     public function __construct(
         Context $context,
@@ -33,7 +39,8 @@ class Index extends \Magento\Framework\App\Action\Action
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
         \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\App\Request\Http $request
+        \Magento\Framework\App\Request\Http $request,
+        \Magento\Framework\Filesystem\Driver\file $fileDriver
     ) {
         parent::__construct($context);
         $this->wplogger = $wplogger;
@@ -41,8 +48,12 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->resultJsonFactory = $resultJsonFactory;
         $this->scopeConfig = $scopeConfig;
         $this->request = $request;
+        $this->fileDriver = $fileDriver;
     }
 
+    /**
+     * Execute for apple pay
+     */
     public function execute()
     {
         $storeScope = \Magento\Store\Model\ScopeInterface::SCOPE_STORE;
@@ -81,10 +92,15 @@ class Index extends \Magento\Framework\App\Action\Action
         define('PRODUCTION_CERTIFICATE_PATH', $certificateCrt);
 
         define('PRODUCTION_CERTIFICATE_KEY_PASS', $certificationPassword);
-
-        define('PRODUCTION_MERCHANTIDENTIFIER', openssl_x509_parse(
+        
+        $prodCertContents = $this->fileDriver->fileGetContents(PRODUCTION_CERTIFICATE_PATH);
+        /*define('PRODUCTION_MERCHANTIDENTIFIER', openssl_x509_parse(
             file_get_contents(PRODUCTION_CERTIFICATE_PATH)
+        )['subject']['UID']);*/
+        define('PRODUCTION_MERCHANTIDENTIFIER', openssl_x509_parse(
+            $prodCertContents
         )['subject']['UID']);
+
         define('PRODUCTION_DOMAINNAME', $domainName);
 
         define('PRODUCTION_DISPLAYNAME', $domainName);
@@ -92,12 +108,12 @@ class Index extends \Magento\Framework\App\Action\Action
         try {
           
             $validation_url = $this->request->getParam('u');
-
-            if ("https" == parse_url($validation_url, PHP_URL_SCHEME) && substr(
-                parse_url($validation_url, PHP_URL_HOST),
+            $urlInfo = UriFactory::factory($validation_url);
+            if ("https" == $urlInfo->getScheme() && substr(
+                $urlInfo->getHost(),
                 -10
             )  == ".apple.com") {
-               
+                // @codingStandardsIgnoreStart
                 // create a new cURL resource
                 $ch = curl_init();
 
@@ -113,11 +129,9 @@ class Index extends \Magento\Framework\App\Action\Action
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 $result = curl_exec($ch);
-                //var_dump($result);
                 curl_close($ch);
-                
+                // @codingStandardsIgnoreEnd
                 $resultJson = '';
-                
                 $resultJson = $this->resultFactory->create(ResultFactory::TYPE_JSON);
                 $resultJson->setData($result);
             

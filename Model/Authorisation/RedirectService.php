@@ -46,8 +46,16 @@ class RedirectService extends \Magento\Framework\DataObject
         $this->worldpayhelper = $worldpayhelper;
     }
     /**
-     * handles provides authorization data for redirect
+     * Handles provides authorization data for redirect
+     *
      * It initiates a  XML request to WorldPay and registers worldpayRedirectUrl
+     *
+     * @param MageOrder $mageOrder
+     * @param Quote $quote
+     * @param string $orderCode
+     * @param string $orderStoreId
+     * @param array $paymentDetails
+     * @param Payment $payment
      */
     public function authorizePayment(
         $mageOrder,
@@ -103,6 +111,15 @@ class RedirectService extends \Magento\Framework\DataObject
         $this->checkoutsession->setWpRedirecturl($successUrl);
     }
 
+    /**
+     * Build redirect url
+     *
+     * @param string $redirect
+     * @param string $paymentType
+     * @param string $countryCode
+     * @param string $languageCode
+     * @return string
+     */
     private function _buildRedirectUrl($redirect, $paymentType, $countryCode, $languageCode)
     {
         $redirect .= '&preferredPaymentMethod=' . $paymentType;
@@ -114,6 +131,8 @@ class RedirectService extends \Magento\Framework\DataObject
 
     /**
      * Get billing Country
+     *
+     * @param Quote $quote
      * @return string
      */
     private function _getCountryForQuote($quote)
@@ -127,6 +146,7 @@ class RedirectService extends \Magento\Framework\DataObject
 
     /**
      * Get local language code
+     *
      * @return string
      */
     protected function _getLanguageForLocale()
@@ -139,6 +159,8 @@ class RedirectService extends \Magento\Framework\DataObject
     }
     
     /**
+     * Get redirect response model
+     *
      * @return \Sapient\AccessWorldpay\Model\Response\RedirectResponse
      */
     protected function _getRedirectResponseModel()

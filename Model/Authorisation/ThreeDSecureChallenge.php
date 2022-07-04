@@ -7,12 +7,17 @@ use Exception;
 
 class ThreeDSecureChallenge extends \Magento\Framework\DataObject
 {
+
+    /**
+     * @var \Sapient\AccessWorldpay\Model\Payment\UpdateAccessWorldpaymentFactory
+     */
     protected $updateWorldPayPayment;
 
-    const CART_URL = 'checkout/cart';
+    public const CART_URL = 'checkout/cart';
 
     /**
      * Constructor
+     *
      * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
      * @param \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse
@@ -52,79 +57,28 @@ class ThreeDSecureChallenge extends \Magento\Framework\DataObject
         //$this->worldpaytoken = $worldpaytoken;
         $this->worldpayHelper = $worldpayHelper;
     }
+
+    /**
+     * Continue post 3ds2 authorization process
+     *
+     * @param array $directOrderParams
+     * @param array $threeDSecureParams
+     */
     public function continuePost3dSecure2AuthorizationProcess($directOrderParams, $threeDSecureParams)
     {
-        
         // @setIs3DSRequest flag set to ensure whether it is 3DS request or not.
         // To add cookie for 3DS second request.
         $this->checkoutSession->setIs3DS2Request(true);
         $this->checkoutSession->unsDirectOrderParams();
         try {
-            if (isset($threeDSecureParams)) {
-                if ($threeDSecureParams['outcome'] !='authenticationFailed') {
-                    $response = $this->paymentservicerequest->order3Ds2Secure(
-                        $directOrderParams,
-                        $threeDSecureParams
-                    );
-                    $this->response = $this->directResponse->setResponse($response);
-                // @setIs3DSRequest flag is unset from checkout session.
-                    $this->checkoutSession->setIs3DS2Request();
-                    $orderIncrementId = current(explode('-', $directOrderParams['orderCode']));
-                    $this->_order = $this->orderservice->getByIncrementId($orderIncrementId);
-                    $paymentUpdate = $this->paymentservice->createPaymentUpdateFromWorldPayXml(
-                        $this->response->getXml()
-                    );
-                    $paymentUpdate->apply($this->_order->getPayment(), $this->_order);
-                    $this->_abortIfPaymentError($paymentUpdate);
-                    $this->saveTokenData($this->_order->getPayment());
-                    $this->customerSession->unsUsedSavedCard();
-                } else {
-                    $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM19'));
-                    $this->_messageManager->addErrorMessage(__(
-                        $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
-                    ));
-                    if ($this->checkoutSession->getInstantPurchaseOrder()) {
-                        $this->wplogger->info("Authentication failed.");
-                        $this->_messageManager->addErrorMessage(__(
-                            $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
-                        ));
-                        $redirectUrl = $this->checkoutSession->getInstantPurchaseRedirectUrl();
-                        $this->checkoutSession->unsInstantPurchaseRedirectUrl();
-                        $this->checkoutSession->unsInstantPurchaseOrder();
-                        $this->checkoutSession->setWpResponseForwardUrl($redirectUrl);
-                    } else {
-                        $this->wplogger->info("Authentication failed.");
-                        $this->_messageManager->addErrorMessage(__(
-                            $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
-                        ));
-                        $this->checkoutSession->setWpResponseForwardUrl(
-                            $this->urlBuilders->getUrl(self::CART_URL, ['_secure' => true])
-                        );
-                    }
-                }
+            $exemptionOutcome = isset($directOrderParams['paymentDetails']['exemptionResult'])
+                                ? $directOrderParams['paymentDetails']['exemptionResult'] : null;
+            if (isset($threeDSecureParams) || isset($exemptionOutcome)) {
+                $exemptionPlacement = isset($exemptionOutcome['exemption']['placement'])
+                                      ? $exemptionOutcome['exemption']['placement'] : null;
+                $this->handle3dsResponse($threeDSecureParams, $exemptionPlacement, $directOrderParams);
             } else {
-                $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
-                $this->_messageManager->addErrorMessage(__(
-                    $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
-                ));
-                if ($this->checkoutSession->getInstantPurchaseOrder()) {
-                    $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
-                    $this->_messageManager->addErrorMessage(__(
-                        $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
-                    ));
-                    $redirectUrl = $this->checkoutSession->getInstantPurchaseRedirectUrl();
-                    $this->checkoutSession->unsInstantPurchaseRedirectUrl();
-                    $this->checkoutSession->unsInstantPurchaseOrder();
-                    $this->checkoutSession->setWpResponseForwardUrl($redirectUrl);
-                } else {
-                    $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
-                    $this->_messageManager->addErrorMessage(__(
-                        $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
-                    ));
-                    $this->checkoutSession->setWpResponseForwardUrl(
-                        $this->urlBuilders->getUrl(self::CART_URL, ['_secure' => true])
-                    );
-                }
+                $this->handle3dsErrors();
             }
         } catch (Exception $e) {
             $this->checkoutSession->setInstantPurchaseMessage('');
@@ -142,47 +96,36 @@ class ThreeDSecureChallenge extends \Magento\Framework\DataObject
         }
     }
     
+    /**
+     * Saved token data
+     *
+     * @param Payment $payment
+     */
     public function saveTokenData($payment)
     {
-         $isInstantPurchaseOrder = $this->checkoutSession->getInstantPurchaseOrder();
+        $isInstantPurchaseOrder = $this->checkoutSession->getInstantPurchaseOrder();
         if ($this->customerSession->isLoggedIn() && !$isInstantPurchaseOrder) {
             if ($this->customerSession->getIsSavedCardRequested()) {
-                $tokenDetailResponseToArray = $this->customerSession->getDetailedToken();
-                $this->updateWorldPayPayment->create()->
-                        saveVerifiedToken($tokenDetailResponseToArray, $payment);
-            
-                //unset the session variables
-                $this->customerSession->unsIsSavedCardRequested();
-                $this->customerSession->unsDetailedToken();
-        
+                //to save the card details for registered user
+                $this->saveCardForRegisteredUser($payment);
             } elseif (!empty($this->customerSession->getVerifiedDetailedToken())
-                && $this->worldpayHelper->checkIfTokenExists($this->customerSession->
-                        getVerifiedDetailedToken())) {
+                      && $this->worldpayHelper->checkIfTokenExists(
+                          $this->customerSession->getVerifiedDetailedToken()
+                      )) {
                 $this->wplogger->info(" User already has this card saved....");
                 $this->customerSession->unsVerifiedDetailedToken();
             } elseif (empty($this->customerSession->getUsedSavedCard())) {
                 //delete verified token for registered user when save_card=0
-                $verifiedToken = $this->customerSession->getVerifiedDetailedToken();
-                $customerId = $this->customerSession->getCustomer()->getId();
-                $this->customerSession->unsVerifiedDetailedToken();
-                $this->wplogger->info(
-                    " Inititating Delete Token for Registered customer with customerID="
-                    .$customerId." ...."
-                );
-                $this->paymentservicerequest->getTokenDelete($verifiedToken);
+                $this->deleteSavedCardForRegisteredUser();
             }
         } elseif (!empty($this->customerSession->getVerifiedDetailedToken())) {
             //delete verified token for guest user
-            $verifiedToken = $this->customerSession->getVerifiedDetailedToken();
-            $this->customerSession->unsVerifiedDetailedToken();
-            $this->wplogger->info(" Inititating Delete Token for Guest User....");
-               $this->paymentservicerequest->getTokenDelete($verifiedToken);
-            
+            $this->deleteSavedCardForGuestUser();
         }
     }
     
     /**
-     * help to build url if payment is success
+     * Help to build url if payment is success
      */
     private function _handleAuthoriseSuccess()
     {
@@ -192,8 +135,9 @@ class ThreeDSecureChallenge extends \Magento\Framework\DataObject
     }
 
     /**
-     * it handles if payment is refused or cancelled
-     * @param  Object $paymentUpdate
+     * It handles if payment is refused or cancelled
+     *
+     * @param Object $paymentUpdate
      */
     private function _abortIfPaymentError($paymentUpdate)
     {
@@ -214,6 +158,168 @@ class ThreeDSecureChallenge extends \Magento\Framework\DataObject
             $this->orderservice->removeAuthorisedOrder();
             $this->_handleAuthoriseSuccess();
            // $this->_updateTokenData($this->response->getXml());
+        }
+    }
+    
+    /**
+     * Saved the exemption data
+     */
+    private function _saveExemptionData()
+    {
+        if (!empty($this->customerSession->getExemptionData())) {
+            $this->wplogger->info(" Save Exemption data.........");
+            $exemptionData = $this->customerSession->getExemptionData();
+            $this->customerSession->unsExemptionData();
+            $this->updateWorldPayPayment->create()->saveExemptionData($exemptionData);
+        }
+    }
+    
+    /**
+     * Save card for registered user
+     *
+     * @param Payment $payment
+     */
+    private function saveCardForRegisteredUser($payment)
+    {
+        $tokenDetailResponseToArray = $this->customerSession->getDetailedToken();
+        $this->updateWorldPayPayment->create()->
+                saveVerifiedToken($tokenDetailResponseToArray, $payment);
+
+        //unset the session variables
+        $this->customerSession->unsIsSavedCardRequested();
+        $this->customerSession->unsDetailedToken();
+    }
+    
+    /**
+     * Delete saved card for registered user
+     */
+    private function deleteSavedCardForRegisteredUser()
+    {
+        $verifiedToken = $this->customerSession->getVerifiedDetailedToken();
+        $customerId = $this->customerSession->getCustomer()->getId();
+        $this->customerSession->unsVerifiedDetailedToken();
+        $this->wplogger->info(
+            " Inititating Delete Token for Registered customer with customerID="
+                . $customerId . " ...."
+        );
+        $this->paymentservicerequest->getTokenDelete($verifiedToken);
+    }
+    
+    /**
+     * Delete saved card for guest user
+     */
+    private function deleteSavedCardForGuestUser()
+    {
+        $verifiedToken = $this->customerSession->getVerifiedDetailedToken();
+        $this->customerSession->unsVerifiedDetailedToken();
+        $this->wplogger->info(" Inititating Delete Token for Guest User....");
+        $this->paymentservicerequest->getTokenDelete($verifiedToken);
+    }
+    
+    /**
+     * Handle 3ds response
+     *
+     * @param array $threeDSecureParams
+     * @param mixed $exemptionPlacement
+     * @param mixed $directOrderParams
+     */
+    private function handle3dsResponse($threeDSecureParams, $exemptionPlacement, $directOrderParams)
+    {
+        if ((isset($threeDSecureParams['outcome'])
+            && $threeDSecureParams['outcome'] != 'authenticationFailed') || isset($exemptionPlacement)) {
+            $this->handle3dsSuccessResponse($threeDSecureParams, $exemptionPlacement, $directOrderParams);
+        } else {
+            $this->handle3dsFailureResponse();
+        }
+    }
+
+    /**
+     * Handle 3ds success response
+     *
+     * @param array $threeDSecureParams
+     * @param mixed $exemptionPlacement
+     * @param mixed $directOrderParams
+     */
+    private function handle3dsSuccessResponse($threeDSecureParams, $exemptionPlacement, $directOrderParams)
+    {
+        $response = (isset($exemptionPlacement) && $exemptionPlacement === "authorization")
+                    ? $this->paymentservicerequest->order($directOrderParams)
+                    : $this->paymentservicerequest->order3Ds2Secure($directOrderParams, $threeDSecureParams);
+        $this->response = $this->directResponse->setResponse($response);
+        // @setIs3DSRequest flag is unset from checkout session.
+        $this->checkoutSession->setIs3DS2Request();
+        $orderIncrementId = current(explode('-', $directOrderParams['orderCode']));
+        $this->_order = $this->orderservice->getByIncrementId($orderIncrementId);
+        $paymentUpdate = $this->paymentservice->createPaymentUpdateFromWorldPayXml(
+            $this->response->getXml()
+        );
+        $paymentUpdate->apply($this->_order->getPayment(), $this->_order);
+        $this->_abortIfPaymentError($paymentUpdate);
+        //save Exemption data
+        $this->_saveExemptionData();
+
+        $isInstantPurchaseOrder = $this->checkoutSession->getInstantPurchaseOrder();
+        if (!$isInstantPurchaseOrder) {
+            $this->saveTokenData($this->_order->getPayment());
+        }
+        $this->customerSession->unsUsedSavedCard();
+    }
+    
+    /**
+     * Handle 3ds failure response
+     */
+    private function handle3dsFailureResponse()
+    {
+        $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM19'));
+        $this->_messageManager->addErrorMessage(__(
+            $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
+        ));
+        if ($this->checkoutSession->getInstantPurchaseOrder()) {
+            $this->wplogger->info("Authentication failed.");
+            $this->_messageManager->addErrorMessage(__(
+                $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
+            ));
+            $redirectUrl = $this->checkoutSession->getInstantPurchaseRedirectUrl();
+            $this->checkoutSession->unsInstantPurchaseRedirectUrl();
+            $this->checkoutSession->unsInstantPurchaseOrder();
+            $this->checkoutSession->setWpResponseForwardUrl($redirectUrl);
+        } else {
+            $this->wplogger->info("Authentication failed.");
+            $this->_messageManager->addErrorMessage(__(
+                $this->worldpayHelper->getCreditCardSpecificException('CCAM19')
+            ));
+            $this->checkoutSession->setWpResponseForwardUrl(
+                $this->urlBuilders->getUrl(self::CART_URL, ['_secure' => true])
+            );
+        }
+    }
+
+    /**
+     * Handle 3ds errors
+     */
+    private function handle3dsErrors()
+    {
+        $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
+        $this->_messageManager->addErrorMessage(__(
+            $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
+        ));
+        if ($this->checkoutSession->getInstantPurchaseOrder()) {
+            $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
+            $this->_messageManager->addErrorMessage(__(
+                $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
+            ));
+            $redirectUrl = $this->checkoutSession->getInstantPurchaseRedirectUrl();
+            $this->checkoutSession->unsInstantPurchaseRedirectUrl();
+            $this->checkoutSession->unsInstantPurchaseOrder();
+            $this->checkoutSession->setWpResponseForwardUrl($redirectUrl);
+        } else {
+            $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM6'));
+            $this->_messageManager->addErrorMessage(__(
+                $this->worldpayHelper->getCreditCardSpecificException('CCAM6')
+            ));
+            $this->checkoutSession->setWpResponseForwardUrl(
+                $this->urlBuilders->getUrl(self::CART_URL, ['_secure' => true])
+            );
         }
     }
 }

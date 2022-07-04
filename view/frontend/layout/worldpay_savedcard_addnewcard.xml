@@ -10,7 +10,7 @@
             <block class="Magento\Framework\View\Element\Messages" name="messages" as="messages" template="Magento_Theme::messages.phtml"/>
         </referenceContainer>
          <referenceContainer name="content">
-            <block class="Sapient\AccessWorldpay\Block\Addnewcard" name="addnewcard" template="Sapient_AccessWorldpay::addnewcard.phtml"  cacheable="false"/>
+            <block class="Sapient\AccessWorldpay\Block\Addnewcard" name="addnewcard" template="Sapient_AccessWorldpay::addnewcard.phtml"  />
         </referenceContainer>
     </body>
 </page>

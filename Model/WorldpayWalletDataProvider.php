@@ -30,6 +30,9 @@ class WorldpayWalletDataProvider implements AdditionalDataProviderInterface
 
     /**
      * @param ArrayManager $arrayManager
+     * @param \Magento\Authorization\Model\CompositeUserContext $userContext
+     * @param \Magento\Framework\Stdlib\DateTime\DateTime $dateTime
+     * @param \Sapient\AccessWorldpay\Helper\Data $helper
      */
     public function __construct(
         ArrayManager $arrayManager,

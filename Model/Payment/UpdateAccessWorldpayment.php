@@ -19,18 +19,22 @@ use Magento\Vault\Model\PaymentTokenManagement;
 class UpdateAccessWorldpayment
 {
     /**
-     * @var \Sapient\AccessWorldpay\Model\AccessWorldpaymentFactory
+     * @var $worldpaypayment
      */
     protected $worldpaypayment;
+
+    /**
+     * @var $paymentMethodType
+     */
     protected $paymentMethodType;
     
     /**
-     * @var \Sapient\AccessWorldpay\Model\OmsDataFactory
+     * @var $omsDataFactory
      */
     protected $omsDataFactory;
     
     /**
-     * @var \Sapient\AccessWorldpay\Model\PartialSettlementsFactory
+     * @var $PartialSettlementsFactory
      */
     protected $partialSettlementsFactory;
     
@@ -38,8 +42,21 @@ class UpdateAccessWorldpayment
      * Constructor
      *
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param SavedTokenFactory $savedTokenFactory
      * @param \Sapient\AccessWorldpay\Model\AccessWorldpaymentFactory $worldpaypayment
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+     * @param \Magento\Framework\Message\ManagerInterface $messageManager
+     * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Magento\Backend\Model\Session\Quote $session
+     * @param CreditCardTokenFactory $paymentTokenFactory
+     * @param OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory
+     * @param \Magento\Vault\Api\PaymentTokenRepositoryInterface $paymentTokenRepository
+     * @param EncryptorInterface $encryptor
+     * @param \Sapient\AccessWorldpay\Model\OmsDataFactory $omsDataFactory
+     * @param \Sapient\AccessWorldpay\Model\PartialSettlementsFactory $partialSettlementsFactory
+     * @param \Sapient\AccessWorldpay\Model\Token\WorldpayToken $worldpayToken
+     * @param PaymentTokenManagement $paymentTokenManagement
+     * @param \Magento\Customer\Model\CustomerFactory $customer
      */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
@@ -80,7 +97,10 @@ class UpdateAccessWorldpayment
     /**
      * Updating Risk gardian
      *
-     * @param \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse
+     * @param string $orderId
+     * @param string $orderCode
+     * @param object $directResponse
+     * @param object $paymentObject
      */
     public function updateAccessWorldpayPayment(
         $orderId,
@@ -88,11 +108,9 @@ class UpdateAccessWorldpayment
         \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse,
         \Magento\Payment\Model\InfoInterface $paymentObject
     ) {
-                    
         $response = $directResponse->getXml();
         if ($response && isset($response->outcome) && isset($directResponse->getXml()->_links)) {
             $responseLinks = $directResponse->getXml()->_links;
- 
             $cancelLink = $settleLink = $partialSettleLink = $eventsLink = '';
             //foreach($responseLinks as $key => $link){
             if (isset($responseLinks->cancel->href)) {
@@ -107,6 +125,9 @@ class UpdateAccessWorldpayment
             if (isset($responseLinks->events->href)) {
                 $eventsLink = $responseLinks->events->href;
             }
+            if (isset($responseLinks->reversal->href)) {
+                $reversalLink = $responseLinks->reversal->href;
+            }
             //}
             $omsData['order_increment_id'] = $orderId;
             $omsData['awp_order_code'] = $orderCode;
@@ -115,6 +136,9 @@ class UpdateAccessWorldpayment
             $omsData['awp_settle_param'] = $settleLink;
             $omsData['awp_partial_settle_param'] = $partialSettleLink;
             $omsData['awp_events_param'] = $eventsLink;
+            if (isset($reversalLink)) {
+                $omsData['awp_reversal_param'] = $reversalLink;
+            }
             $oms = $this->omsDataFactory->create();
             $oms->setData($omsData)->save();
             
@@ -124,97 +148,37 @@ class UpdateAccessWorldpayment
         }
         return false;
     }
-    
+
+    /**
+     * Save verified worldpay token
+     *
+     * @param array $tokenDetailResponseToArray
+     * @param object $payment
+     */
     public function saveVerifiedToken($tokenDetailResponseToArray, $payment)
     {
-        
         $savedTokenFactory = $this->savedTokenFactory->create();
-        // checking tokenization exist or not
         
-            $tokenDataExist = '';
-            
-            $tokenDataExist = $savedTokenFactory->getCollection()
-               ->addFieldToFilter('customer_id', $tokenDetailResponseToArray['customer_id'])
-                ->addFieldToFilter('token_id', $tokenDetailResponseToArray['tokenId'])
-                ->getFirstItem()->getData();
-            
+        $tokenDataExist = $this->getTokenExistData($savedTokenFactory, $tokenDetailResponseToArray)
+                          ? $this->getTokenExistData($savedTokenFactory, $tokenDetailResponseToArray)
+                          : '';
+        // checking tokenization exist or not
         if ($tokenDataExist) {
-            $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/worldpay.log');
-            $logger = new \Zend\Log\Logger();
-            $logger->addWriter($writer);
-            $logger->info('token is already exists ..........................................');
-            if (isset($tokenDetailResponseToArray['tokenId'])) {
-                //Manage Exceed Update Limit
-                if (isset($tokenDetailResponseToArray['conflictResponse'])
-                    && (isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
-                        && isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
-                        && $tokenDetailResponseToArray['conflictResponse']['nameConflict']==429)
-                    || isset($tokenDetailResponseToArray['conflictResponse'])
-                    && (isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
-                        && !isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
-                        && $tokenDetailResponseToArray['conflictResponse']['nameConflict']==429)
-                    || isset($tokenDetailResponseToArray['conflictResponse'])
-                    && (!isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
-                        && isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
-                        && $tokenDetailResponseToArray['conflictResponse']['dateConflict']==429)) {
-                    $this->_messageManager->addError(
-                        __($this->worldpayHelper->getCreditCardSpecificException('CCAM21'))
-                    );
-                    $logger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM21'));
-                    return;
-                }
-                $customerData = $this->customer->create()->load($tokenDetailResponseToArray['customer_id']);
-                //update Token
-                $logger->info('Token Already Exists ..........................................');
-                $this->_worldpayToken->updateTokenByCustomer(
-                    $this->_loadTokenModel($tokenDetailResponseToArray),
-                    $customerData
-                );
-                //update vault token
-                $this->_applyVaultTokenUpdate($tokenDetailResponseToArray);
-                $this->_messageManager->addNotice(__($this->worldpayHelper->getMyAccountSpecificexception('MCAM11')));
-                return;
-            }
-                
+            $this->wplogger->info('token is already exists ..........................................');
+            //Manage Exceed Update Limit
+            return $this->manageExceedUpdateLimit($tokenDetailResponseToArray);
         }
-                $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/worldpay.log');
-                $logger = new \Zend\Log\Logger();
-                $logger->addWriter($writer);
-                $logger->info('saving the token ..........................................');
-           
-            $savedTokenFactory->setTokenId($tokenDetailResponseToArray['tokenId']);
-            $savedTokenFactory->setDescription($tokenDetailResponseToArray['description']);
-            $savedTokenFactory->setToken($tokenDetailResponseToArray['tokenPaymentInstrument']['href']);
-            $savedTokenFactory->setTransactionReference(
-                $tokenDetailResponseToArray['schemeTransactionReference']
-            );
-            $savedTokenFactory->setTokenExpiryDate($tokenDetailResponseToArray['tokenExpiryDateTime']);
-            $savedTokenFactory->setCardNumber($tokenDetailResponseToArray['paymentInstrument']['cardNumber']);
-            $savedTokenFactory->setCardholderName(
-                $tokenDetailResponseToArray['paymentInstrument']['cardHolderName']
-            );
-            $savedTokenFactory->setCardExpiryMonth(
-                $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['month']
-            );
-            $savedTokenFactory->setCardExpiryYear(
-                $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['year']
-            );
+        $this->saveTokenDetails($savedTokenFactory, $tokenDetailResponseToArray);
             
-            $savedTokenFactory->setMethod('worldpay_cc');
-            $savedTokenFactory->setCustomerId($tokenDetailResponseToArray['customer_id']);
-            $savedTokenFactory->setDisclaimerFlag($tokenDetailResponseToArray['disclaimer']);
-            $savedTokenFactory->setCardBrand($tokenDetailResponseToArray['card_brand']);
-            
-            $savedTokenFactory->save();
-            $logger->info('Saving is done ................................................');
-            $logger->info('Saving to Vault:START ................................................');
-            $this->setVaultPaymentToken($tokenDetailResponseToArray, $payment);
-            $logger->info('Saving to Vault:END ................................................');
+        $this->wplogger->info('Saving to Vault:START ................................................');
+        $this->setVaultPaymentToken($tokenDetailResponseToArray, $payment);
+        $this->wplogger->info('Saving to Vault:END ................................................');
     }
     /**
      * Updating Refund data
      *
-     * @param $orderIncrementId
+     * @param object $directResponse
+     * @return true|false
      */
     public function updatePaymentSettlement($directResponse)
     {
@@ -242,9 +206,11 @@ class UpdateAccessWorldpayment
     }
     
     /**
-     * Updating Refund data
+     * Updating Partial Payment Settlement
      *
-     * @param $orderIncrementId
+     * @param string $orderId
+     * @param string $directResponse
+     * @param object $paymentObject
      */
     public function updatePartialPaymentSettlement(
         $orderId,
@@ -281,7 +247,14 @@ class UpdateAccessWorldpayment
         }
         return false;
     }
-    
+
+    /**
+     * Set vault payment token
+     *
+     * @param array $tokenDetailResponseToArray
+     * @param object $paymentObject
+     * @return mixed
+     */
     public function setVaultPaymentToken($tokenDetailResponseToArray, $paymentObject)
     {
         $paymentToken = $this->getVaultPaymentToken($tokenDetailResponseToArray);
@@ -294,7 +267,13 @@ class UpdateAccessWorldpayment
             }
         }
     }
-    
+
+    /**
+     * Retrive the extension attributes
+     *
+     * @param InfoInterface $payment
+     * @return mixed
+     */
     private function getExtensionAttributes(InfoInterface $payment)
     {
         $extensionAttributes = $payment->getExtensionAttributes();
@@ -304,7 +283,13 @@ class UpdateAccessWorldpayment
         }
         return $extensionAttributes;
     }
-    
+
+    /**
+     * Get vault payment token entity
+     *
+     * @param array $tokenDetailResponseToArray
+     * @return $paymentToken|null
+     */
     protected function getVaultPaymentToken($tokenDetailResponseToArray)
     {
         // Check token existing in gateway response
@@ -313,16 +298,7 @@ class UpdateAccessWorldpayment
             return null;
         }
 
-        /** @var PaymentTokenInterface $paymentToken */
-        $paymentToken = $this->paymentTokenFactory->create();
-        $paymentToken->setGatewayToken($token);
-        $paymentToken->setExpiresAt($tokenDetailResponseToArray['tokenExpiryDateTime']);
-        $paymentToken->setIsVisible(true);
-        $paymentToken->setTokenDetails($this->convertDetailsToJSON([
-            'type' => $tokenDetailResponseToArray['card_brand'].'-SSL',
-            'maskedCC' => $this->getLastFourNumbers($tokenDetailResponseToArray['paymentInstrument']['cardNumber']),
-            'expirationDate'=> $this->getExpirationMonthAndYear($tokenDetailResponseToArray)
-        ]));
+        $paymentToken = $this->saveVaultPaymentTokenData($tokenDetailResponseToArray, $token);
         
         //3ds related
         if ($this->worldpayHelper->is3DSecureEnabled()) {
@@ -332,7 +308,12 @@ class UpdateAccessWorldpayment
         }
         return $paymentToken;
     }
-    
+
+    /**
+     * Provides additional information part specific for payment method.
+     *
+     * @param InfoInterface $payment
+     */
     private function getAdditionalInformation(InfoInterface $payment)
     {
         $additionalInformation = $payment->getAdditionalInformation();
@@ -342,81 +323,76 @@ class UpdateAccessWorldpayment
         $additionalInformation[VaultConfigProvider::IS_ACTIVE_CODE] = true;
         $payment->setAdditionalInformation($additionalInformation);
     }
-    
+
+    /**
+     * Finding the last four digits by given number
+     *
+     * @param string $number
+     * @return string
+     */
     public function getLastFourNumbers($number)
     {
         return substr($number, -4);
     }
-    
+
+    /**
+     * Get expiration month and year
+     *
+     * @param array $tokenDetailResponseToArray
+     * @return string
+     */
     public function getExpirationMonthAndYear($tokenDetailResponseToArray)
     {
         $month = $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['month'];
         $year = $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['year'];
         return $month.'/'.$year;
     }
-    
+
+    /**
+     * Convert payment token details to JSON
+     *
+     * @param array $details
+     * @return string
+     */
     public function convertDetailsToJSON($details)
     {
         $json = \Zend_Json::encode($details);
         return $json ? $json : '{}';
     }
     
+    /**
+     * Save verified token acoount
+     *
+     * @param array $tokenDetailResponseToArray
+     * @return true|false
+     */
     public function saveVerifiedTokenForMyAccount($tokenDetailResponseToArray)
     {
-
         $savedTokenFactory = $this->savedTokenFactory->create();
+
+        $tokenDataExist = $this->getTokenExistData($savedTokenFactory, $tokenDetailResponseToArray)
+                          ? $this->getTokenExistData($savedTokenFactory, $tokenDetailResponseToArray)
+                          : '';
+
         // checking tokenization exist or not
-
-        $tokenDataExist = '';
-
-        $tokenDataExist = $savedTokenFactory->getCollection()
-                        ->addFieldToFilter('customer_id', $tokenDetailResponseToArray['customer_id'])
-                        ->addFieldToFilter('token_id', $tokenDetailResponseToArray['tokenId'])
-                        ->getFirstItem()->getData();
-
         if ($tokenDataExist) {
-            $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/worldpay.log');
-            $logger = new \Zend\Log\Logger();
-            $logger->addWriter($writer);
-            $logger->info('token is already exists ..........................................');
+            $this->wplogger->info('token is already exists ..........................................');
             $this->_messageManager->addNotice(__($this->worldpayHelper->getMyAccountSpecificexception('MCAM13')));
             return false;
         }
-        $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/worldpay.log');
-        $logger = new \Zend\Log\Logger();
-        $logger->addWriter($writer);
-        $logger->info('saving the token ..........................................');
-
-        $savedTokenFactory->setTokenId($tokenDetailResponseToArray['tokenId']);
-        $savedTokenFactory->setDescription($tokenDetailResponseToArray['description']);
-        $savedTokenFactory->setToken($tokenDetailResponseToArray['tokenPaymentInstrument']['href']);
-        $savedTokenFactory->setTransactionReference(
-            $tokenDetailResponseToArray['schemeTransactionReference']
-        );
-        $savedTokenFactory->setTokenExpiryDate($tokenDetailResponseToArray['tokenExpiryDateTime']);
-        $savedTokenFactory->setCardNumber($tokenDetailResponseToArray['paymentInstrument']['cardNumber']);
-        $savedTokenFactory->setCardholderName(
-            $tokenDetailResponseToArray['paymentInstrument']['cardHolderName']
-        );
-        $savedTokenFactory->setCardExpiryMonth(
-            $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['month']
-        );
-        $savedTokenFactory->setCardExpiryYear(
-            $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['year']
-        );
-        $savedTokenFactory->setMethod('worldpay_cc');
-        $savedTokenFactory->setCustomerId($tokenDetailResponseToArray['customer_id']);
-        /*Disclaimer*/
-        $savedTokenFactory->setDisclaimerFlag($tokenDetailResponseToArray['disclaimer']);
-        $savedTokenFactory->setCardBrand($tokenDetailResponseToArray['card_brand']);
-        $savedTokenFactory->save();
-        $logger->info('Saving is done ................................................');
-        $logger->info('Saving to Vault:START ................................................');
+        $this->saveTokenDetails($savedTokenFactory, $tokenDetailResponseToArray);
+        $this->wplogger->info('Saving to Vault:START ................................................');
         $this->setVaultPaymentTokenMyAccount($tokenDetailResponseToArray);
-        $logger->info('Saving to Vault:END ................................................');
+        $this->wplogger->info('Saving to Vault:END ................................................');
         return true;
     }
 
+    /**
+     * Set vault payment token
+     *
+     * @param array $tokenDetailResponseToArray
+     * @return mixed
+     */
     protected function setVaultPaymentTokenMyAccount($tokenDetailResponseToArray)
     {
         // Check token existing in gateway response
@@ -424,19 +400,9 @@ class UpdateAccessWorldpayment
         if (empty($token)) {
             return null;
         }
-
-        /** @var PaymentTokenInterface $paymentToken */
-        $paymentToken = $this->paymentTokenFactory->create();
-        $paymentToken->setGatewayToken($token);
-        $paymentToken->setExpiresAt($tokenDetailResponseToArray['tokenExpiryDateTime']);
-        $paymentToken->setIsVisible(true);
-        $paymentToken->setTokenDetails($this->convertDetailsToJSON([
-                    'type' => $tokenDetailResponseToArray['card_brand'].'-SSL',
-                    'maskedCC' => $this->getLastFourNumbers(
-                        $tokenDetailResponseToArray['paymentInstrument']['cardNumber']
-                    ),
-                    'expirationDate' => $this->getExpirationMonthAndYear($tokenDetailResponseToArray)
-        ]));
+        
+        $paymentToken = $this->saveVaultPaymentTokenData($tokenDetailResponseToArray, $token);
+        
         $paymentToken->setIsActive(true);
         $paymentToken->setPaymentMethodCode('worldpay_cc');
         $paymentToken->setCustomerId($this->customerSession->getCustomerId());
@@ -444,6 +410,12 @@ class UpdateAccessWorldpayment
         $this->paymentTokenRepository->save($paymentToken);
     }
 
+    /**
+     * Generate public hash
+     *
+     * @param PaymentTokenInterface $paymentToken
+     * @return string
+     */
     protected function generatePublicHash(PaymentTokenInterface $paymentToken)
     {
         $hashKey = $paymentToken->getGatewayToken();
@@ -458,7 +430,9 @@ class UpdateAccessWorldpayment
     }
 
     /**
-     * load Token
+     * Load Token
+     *
+     * @param array $tokenUpdateData
      * @return Sapient/AccessWorldPay/Model/Token
      */
     public function _loadTokenModel($tokenUpdateData)
@@ -478,6 +452,11 @@ class UpdateAccessWorldpayment
         return $token;
     }
 
+    /**
+     * Apply vault token update
+     *
+     * @param object $tokenDetail
+     */
     public function _applyVaultTokenUpdate($tokenDetail)
     {
         $existingVaultPaymentToken = $this->paymentTokenManagement->getByGatewayToken(
@@ -487,7 +466,13 @@ class UpdateAccessWorldpayment
         );
             $this->_saveVaultToken($existingVaultPaymentToken, $tokenDetail);
     }
-    
+
+    /**
+     * Set vault token
+     *
+     * @param object $vaultToken
+     * @param array $tokenDetail
+     */
     public function _saveVaultToken(PaymentTokenInterface $vaultToken, $tokenDetail)
     {
         $vaultToken->setTokenDetails($this->convertDetailsToJSON([
@@ -502,7 +487,13 @@ class UpdateAccessWorldpayment
             $this->messageManager->addException($e, __('Error: ').$e->getMessage());
         }
     }
-    
+
+    /**
+     * Set cardOnFile authorize link
+     *
+     * @param string $tokenId
+     * @param string $cardOnFileAuthLink
+     */
     public function _setCardOnFileAuthorizeLink($tokenId, $cardOnFileAuthLink)
     {
         $token = $this->savedTokenFactory->create()->loadByTokenCode($tokenId);
@@ -510,5 +501,145 @@ class UpdateAccessWorldpayment
             $token->setCardonfileAuthLink($cardOnFileAuthLink);
             $token->save();
         }
+    }
+
+    /**
+     * Save exemption data
+     *
+     * @param array $exemptionData
+     */
+    public function saveExemptionData($exemptionData)
+    {
+        $wpp = $this->worldpaypayment->create();
+        if (isset($exemptionData['transactionReference'])) {
+            $wpp = $wpp->loadByAccessWorldpayOrderId($exemptionData['transactionReference']);
+            if (isset($exemptionData['outcome']) && isset($exemptionData['riskProfile']['href'])) {
+                $wpp->setData('exemption_outcome', $exemptionData['outcome']);
+                $wpp->setData('risk_profile', $exemptionData['riskProfile']['href']);
+                if ($exemptionData['outcome'] === 'exemption' && isset($exemptionData['exemption']['type'])) {
+                    $wpp->setData('exemption_type', $exemptionData['exemption']['type']);
+                }
+            }
+        }
+        $wpp->save();
+    }
+
+    /**
+     * Get token existData
+     *
+     * @param object $savedTokenFactory
+     * @param array $tokenDetailResponseToArray
+     * @return object
+     */
+    private function getTokenExistData($savedTokenFactory, $tokenDetailResponseToArray)
+    {
+        $tokenDataExist = $savedTokenFactory->getCollection()
+                        ->addFieldToFilter('customer_id', $tokenDetailResponseToArray['customer_id'])
+                        ->addFieldToFilter('token_id', $tokenDetailResponseToArray['tokenId'])
+                        ->getFirstItem()->getData();
+        return $tokenDataExist;
+    }
+
+    /**
+     * Save token details
+     *
+     * @param object $savedTokenFactory
+     * @param array $tokenDetailResponseToArray
+     * @return
+     */
+    private function saveTokenDetails($savedTokenFactory, $tokenDetailResponseToArray)
+    {
+        $this->wplogger->info('saving the token ..........................................');
+
+        $savedTokenFactory->setTokenId($tokenDetailResponseToArray['tokenId']);
+        $savedTokenFactory->setDescription($tokenDetailResponseToArray['description']);
+        $savedTokenFactory->setToken($tokenDetailResponseToArray['tokenPaymentInstrument']['href']);
+        $savedTokenFactory->setTransactionReference(
+            $tokenDetailResponseToArray['schemeTransactionReference']
+        );
+        $savedTokenFactory->setTokenExpiryDate($tokenDetailResponseToArray['tokenExpiryDateTime']);
+        $savedTokenFactory->setCardNumber($tokenDetailResponseToArray['paymentInstrument']['cardNumber']);
+        $savedTokenFactory->setCardholderName(
+            $tokenDetailResponseToArray['paymentInstrument']['cardHolderName']
+        );
+        $savedTokenFactory->setCardExpiryMonth(
+            $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['month']
+        );
+        $savedTokenFactory->setCardExpiryYear(
+            $tokenDetailResponseToArray['paymentInstrument']['cardExpiryDate']['year']
+        );
+
+        $savedTokenFactory->setMethod('worldpay_cc');
+        $savedTokenFactory->setCustomerId($tokenDetailResponseToArray['customer_id']);
+        $savedTokenFactory->setDisclaimerFlag($tokenDetailResponseToArray['disclaimer']);
+        $savedTokenFactory->setCardBrand($tokenDetailResponseToArray['card_brand']);
+
+        $savedTokenFactory->save();
+        $this->wplogger->info('Saving is done ................................................');
+    }
+
+    /**
+     * Manage exceed update limit
+     *
+     * @param array $tokenDetailResponseToArray
+     */
+    private function manageExceedUpdateLimit($tokenDetailResponseToArray)
+    {
+        if (isset($tokenDetailResponseToArray['tokenId'])) {
+            //Manage Exceed Update Limit
+            if (isset($tokenDetailResponseToArray['conflictResponse'])
+                && (isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
+                    && isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
+                    && $tokenDetailResponseToArray['conflictResponse']['nameConflict'] == 429)
+                || isset($tokenDetailResponseToArray['conflictResponse'])
+                && (isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
+                    && !isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
+                    && $tokenDetailResponseToArray['conflictResponse']['nameConflict'] == 429)
+                || isset($tokenDetailResponseToArray['conflictResponse'])
+                && (!isset($tokenDetailResponseToArray['conflictResponse']['nameConflict'])
+                    && isset($tokenDetailResponseToArray['conflictResponse']['dateConflict'])
+                    && $tokenDetailResponseToArray['conflictResponse']['dateConflict'] == 429)) {
+                $this->_messageManager->addError(
+                    __($this->worldpayHelper->getCreditCardSpecificException('CCAM21'))
+                );
+                $this->wplogger->info($this->worldpayHelper->getCreditCardSpecificException('CCAM21'));
+                return;
+            }
+            $customerData = $this->customer->create()->load($tokenDetailResponseToArray['customer_id']);
+            //update Token
+            $this->wplogger->info('Token Already Exists ..........................................');
+            $this->_worldpayToken->updateTokenByCustomer(
+                $this->_loadTokenModel($tokenDetailResponseToArray),
+                $customerData
+            );
+            //update vault token
+            $this->_applyVaultTokenUpdate($tokenDetailResponseToArray);
+            $this->_messageManager->addNotice(__($this->worldpayHelper->getMyAccountSpecificexception('MCAM11')));
+            return;
+        }
+    }
+    
+    /**
+     * Save vault payment token data
+     *
+     * @param array $tokenDetailResponseToArray
+     * @param string $token
+     * @return paymentToken
+     */
+    private function saveVaultPaymentTokenData($tokenDetailResponseToArray, $token)
+    {
+        /** @var PaymentTokenInterface $paymentToken */
+        $paymentToken = $this->paymentTokenFactory->create();
+        $paymentToken->setGatewayToken($token);
+        $paymentToken->setExpiresAt($tokenDetailResponseToArray['tokenExpiryDateTime']);
+        $paymentToken->setIsVisible(true);
+        $paymentToken->setTokenDetails($this->convertDetailsToJSON([
+                    'type' => $tokenDetailResponseToArray['card_brand'].'-SSL',
+                    'maskedCC' => $this->getLastFourNumbers(
+                        $tokenDetailResponseToArray['paymentInstrument']['cardNumber']
+                    ),
+                    'expirationDate' => $this->getExpirationMonthAndYear($tokenDetailResponseToArray)
+        ]));
+        return $paymentToken;
     }
 }

@@ -171,6 +171,28 @@ if ($isworldpayment) {
                     </strong>
                 </td>
             </tr>
+            <tr>
+                <td style="padding-top: .5em;">
+                    <span style="font-weight:600;font-size:1.7rem;">Exemption Data</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><label>Exemption outcome</label></td>
+                <td class="value">
+                    <strong>
+                    <?= /* @noEscape */ $payment->getExemptionOutcome() ?>
+                    </strong>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><label>Exemption type</label></td>
+                <td class="value">
+                    <strong>
+                    <?= /* @noEscape */ $payment->getExemptionType() ?>
+                    </strong>
+                </td>
+            </tr>
+           
             </table>
 
 <?php } ?>

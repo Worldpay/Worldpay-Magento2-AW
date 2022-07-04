@@ -6,8 +6,23 @@ use Exception;
 
 class ThreeDSecureService extends \Magento\Framework\DataObject
 {
-    const CART_URL = 'checkout/cart';
+    public const CART_URL = 'checkout/cart';
     
+    /**
+     * ThreeDSecureService constructor
+     *
+     * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param \Sapient\AccessWorldpay\Model\Response\DirectResponse $directResponse
+     * @param \Sapient\AccessWorldpay\Model\Payment\Service $paymentservice
+     * @param \Magento\Checkout\Model\Session $checkoutSession
+     * @param \Magento\Framework\UrlInterface $urlBuilder
+     * @param \Sapient\AccessWorldpay\Model\Order\Service $orderservice
+     * @param \Magento\Framework\Message\ManagerInterface $messageManager
+     * @param \Sapient\AccessWorldpay\Model\Payment\UpdateAccessWorldpaymentFactory $updateWorldPayPayment
+     * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+     */
     public function __construct(
         \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservicerequest,
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
@@ -36,6 +51,13 @@ class ThreeDSecureService extends \Magento\Framework\DataObject
         $this->worldpayHelper = $worldpayHelper;
     }
     
+    /**
+     * Authenticate 3D data
+     *
+     * @param string $authenticationurl
+     * @param array $directOrderParams
+     * @return array
+     */
     public function authenticate3Ddata($authenticationurl, $directOrderParams)
     {
         $response = $this->paymentservicerequest->authenticate3Ddata($authenticationurl, $directOrderParams);

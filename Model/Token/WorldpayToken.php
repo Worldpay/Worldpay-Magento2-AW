@@ -18,7 +18,14 @@ use Magento\Framework\Encryption\EncryptorInterface;
  */
 class WorldpayToken
 {
+
+    /**
+     * @var PaymentTokenManagementInterface
+     */
     protected $paymentTokenManagement;
+    /**
+     * @var Encryptor
+     */
     protected $encryptor;
 
     /**
@@ -26,6 +33,10 @@ class WorldpayToken
      *
      * @param SavedToken $savedtoken
      * @param Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory
+     * @param CreditCardTokenFactory $paymentTokenFactory
+     * @param PaymentTokenManagementInterface $paymentTokenManagement
+     * @param EncryptorInterface $encryptor
      */
     public function __construct(
         SavedToken $savedtoken,
@@ -57,6 +68,8 @@ class WorldpayToken
     }
 
     /**
+     * Throws exception if customer has no tokenized card
+     *
      * @param Sapient\WorldPay\Model\Token $token
      * @param \Magento\Customer\Model\Customer $customer
      * @throws Sapient\WorldPay\Model\Token\AccessDeniedException
@@ -89,6 +102,7 @@ class WorldpayToken
 
     /**
      * Delete token from a given customer
+     *
      * Throws exception if customer has no access to the given token (if token is not owned by the customer)
      *
      * @param Sapient\WorldPay\Model\Token $token
@@ -104,8 +118,8 @@ class WorldpayToken
     /**
      * Update token of the given customer
      *
-     * @param Sapient\WorldPay\Model\Token $token
-     * @param \Magento\Customer\Model\Customer $customer
+     * @param TokenStateInterface $tokenState
+     * @param InfoInterface $paymentObject
      * @throws Sapient\WorldPay\Model\Token\AccessDeniedException
      */
     public function updateOrInsertToken(TokenStateInterface $tokenState, $paymentObject)
@@ -159,6 +173,12 @@ class WorldpayToken
         }
     }
 
+    /**
+     * Update token of the given vault
+     *
+     * @param TokenStateInterface $tokenState
+     * @param InfoInterface $paymentObject
+     */
     private function _updateToVault(TokenStateInterface $tokenState, $paymentObject)
     {
         $paymentToken = $this->getVaultPaymentToken($tokenState);
@@ -185,6 +205,12 @@ class WorldpayToken
         $extensionAttributes->setVaultPaymentToken($paymentToken);
     }
 
+    /**
+     * Generate the public hash value
+     *
+     * @param PaymentTokenInterface $paymentToken
+     * @return string
+     */
     protected function generatePublicHash(PaymentTokenInterface $paymentToken)
     {
         $hashKey = $paymentToken->getGatewayToken();
@@ -198,6 +224,12 @@ class WorldpayToken
         return $this->encryptor->getHash($hashKey);
     }
 
+    /**
+     * Retrive the extension attributes
+     *
+     * @param Payment $payment
+     * @return mixed
+     */
     private function getExtensionAttributes($payment)
     {
         $extensionAttributes = $payment->getExtensionAttributes();
@@ -208,6 +240,12 @@ class WorldpayToken
         return $extensionAttributes;
     }
 
+    /**
+     * Retrive the vault payment token
+     *
+     * @param TokenStateInterface $tokenElement
+     * @return string
+     */
     protected function getVaultPaymentToken(TokenStateInterface $tokenElement)
     {
         // Check token existing in gateway response
@@ -229,21 +267,45 @@ class WorldpayToken
         return $paymentToken;
     }
 
+    /**
+     * Finding the last four digits by given number
+     *
+     * @param string $number
+     * @return string
+     */
     public function getLastFourNumbers($number)
     {
         return substr($number, -4);
     }
 
+    /**
+     * Generates CC expiration year and month provided in payment.
+     *
+     * @param TokenStateInterface $tokenElement
+     * @return string
+     */
     public function getExpirationMonthAndYear(TokenStateInterface $tokenElement)
     {
         return $tokenElement->getCardExpiryMonth().'/'.$tokenElement->getCardExpiryYear();
     }
 
+    /**
+     * Generates CC expiration date provided in payment.
+     *
+     * @param TokenStateInterface $tokenElement
+     * @return string
+     */
     private function getExpirationDate(TokenStateInterface $tokenElement)
     {
         return $tokenElement->getTokenExpiryDate()->format('Y-m-d H:i:s');
     }
 
+    /**
+     * Convert payment token details to JSON
+     *
+     * @param array $details
+     * @return string
+     */
     private function convertDetailsToJSON($details)
     {
         $json = \Zend_Json::encode($details);

@@ -22,6 +22,7 @@ class AccessWorldpayment extends \Magento\Framework\Model\AbstractModel
     /**
      * Retrieve worldpay payment Details
      *
+     * @param string $orderId
      * @return Sapient\AccessWorldpay\Model\AccessWorldpayment
      */
     public function loadByPaymentId($orderId)
@@ -37,6 +38,7 @@ class AccessWorldpayment extends \Magento\Framework\Model\AbstractModel
     /**
      * Load worldpay payment Details
      *
+     * @param string $order_id
      * @return Sapient\AccessWorldpay\Model\AccessWorldpayment
      */
     public function loadByAccessWorldpayOrderId($order_id)

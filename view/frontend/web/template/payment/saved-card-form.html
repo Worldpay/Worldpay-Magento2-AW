@@ -10,7 +10,7 @@
                    checked: $parent.paymentToken,
                    attr: {id: 'saved_card_' + id,
                    'data-validate': JSON.stringify({'required':true})}
-                   "/>
+                   "></input>
                 <label class="label" for="wp_save_card" data-bind='attr: {for: "saved_card_" + id}'>
                 <!--ko if: $parent.getIcons(card_brand+'-SSL') -->
                         <img data-bind="attr: {
@@ -43,7 +43,7 @@
                                        title: $t('Card Verification Number')},
                      enable: isActive($parents),
                      value: SavedcreditCardVerificationNumber"
-                           />
+                           ></input>
               <div class="field-tooltip toggle">
                   <span class="field-tooltip-action action-cvv"
                         tabindex="0"

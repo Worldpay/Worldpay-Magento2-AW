@@ -14,9 +14,33 @@ class CreditCards extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractM
      * @var string
      */
     protected $_code = 'worldpay_cc';
+
+     /**
+      * Availability option
+      *
+      * @var bool
+      */
     protected $_isGateway = true;
+
+     /**
+      * Availability option
+      *
+      * @var bool
+      */
     protected $_canAuthorize = true;
+
+     /**
+      * Availability option
+      *
+      * @var bool
+      */
     protected $_canUseInternal = false;
+
+     /**
+      * Availability option
+      *
+      * @var bool
+      */
     protected $_canUseCheckout = true;
 
     /**
@@ -32,7 +56,12 @@ class CreditCards extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractM
         parent::authorize($payment, $amount);
         return $this;
     }
-
+    /**
+     * Authorisation service abstract method
+     *
+     * @param int $storeId
+     * @return bool
+     */
     public function getAuthorisationService($storeId)
     {
          $checkoutpaymentdata = $this->paymentdetailsdata;
@@ -51,7 +80,9 @@ class CreditCards extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractM
     }
 
     /**
-     * @param int storeId
+     * Return the integration mode
+     *
+     * @param int $storeId
      * @return bool
      */
     private function _isRedirectIntegrationModeEnabled($storeId)
@@ -62,6 +93,9 @@ class CreditCards extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractM
     }
 
     /**
+     * Check if cc is enabled
+     *
+     * @param \Magento\Quote\Api\Data\CartInterface $quote
      * @return bool
      */
     public function isAvailable(\Magento\Quote\Api\Data\CartInterface $quote = null)
@@ -74,19 +108,39 @@ class CreditCards extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractM
     }
 
     /**
-     * @param int storeId
+     * Is embedded integartion mode enabled?
+     *
+     * @param int $storeId
      * @return bool
      */
     private function _isEmbeddedIntegrationModeEnabled($storeId)
     {
         return $this->worlpayhelper->isIframeIntegration($storeId);
     }
-
+    /**
+     * Get the cc title
+     *
+     * @return string
+     */
     public function getTitle()
     {
-        return $this->worlpayhelper->getCcTitle();
+        if ($order = $this->registry->registry('current_order')) {
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } elseif ($invoice = $this->registry->registry('current_invoice')) {
+            $order = $this->worlpayhelper->getOrderByOrderId($invoice->getOrderId());
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } elseif ($creditMemo = $this->registry->registry('current_creditmemo')) {
+            $order = $this->worlpayhelper->getOrderByOrderId($creditMemo->getOrderId());
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } else {
+            return $this->worlpayhelper->getCcTitle();
+        }
     }
-    
+    /**
+     * Is WebSdk Integration Mode Enable?
+     *
+     * @return string
+     */
     private function _isWebSdkIntegrationModeEnabled()
     {
         $integrationModel = $this->worlpayhelper->getIntegrationModelByPaymentMethodCode('worldpay_cc');

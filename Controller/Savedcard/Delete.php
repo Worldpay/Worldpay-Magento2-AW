@@ -38,6 +38,8 @@ class Delete extends \Magento\Framework\App\Action\Action
      * @param \Sapient\AccessWorldpay\Model\Token\Service $tokenService
      * @param \Sapient\AccessWorldpay\Model\Token\WorldpayToken $worldpayToken
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     * @param PaymentTokenRepositoryInterface $tokenRepository
+     * @param PaymentTokenManagement $paymentTokenManagement
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
      */
     public function __construct(
@@ -77,7 +79,7 @@ class Delete extends \Magento\Framework\App\Action\Action
     }
 
     /**
-     * perform card deletion
+     * Perform card deletion
      */
     public function execute()
     {
@@ -134,6 +136,9 @@ class Delete extends \Magento\Framework\App\Action\Action
     }
 
     /**
+     * TokenNotExistOnWorldpay
+     *
+     * @param string $error
      * @return bool
      */
     protected function _tokenNotExistOnWorldpay($error)
@@ -147,6 +152,9 @@ class Delete extends \Magento\Framework\App\Action\Action
 
     /**
      * Delete card of customer
+     *
+     * @param string $tokenModel
+     * @param string $customer
      */
     protected function _applyTokenDelete($tokenModel, $customer)
     {
@@ -158,6 +166,9 @@ class Delete extends \Magento\Framework\App\Action\Action
 
     /**
      * Delete vault card of customer
+     *
+     * @param string $tokenModel
+     * @param string $customer
      */
     protected function _applyVaultTokenDelete($tokenModel, $customer)
     {

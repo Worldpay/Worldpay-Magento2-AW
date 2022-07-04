@@ -37,6 +37,9 @@ class Failure extends \Magento\Framework\App\Action\Action
         return parent::__construct($context);
     }
 
+    /**
+     * Execute
+     */
     public function execute()
     {
         $this->wplogger->info('worldpay returned failure url');
@@ -50,6 +53,11 @@ class Failure extends \Magento\Framework\App\Action\Action
         return $this->resultRedirectFactory->create()->setPath('checkout/cart', ['_current' => true]);
     }
 
+    /**
+     * GetFailureNoticeForOrder
+     *
+     * @param string $order
+     */
     private function _getFailureNoticeForOrder($order)
     {
         return __('Order #'.$order->getIncrementId().' Failed');

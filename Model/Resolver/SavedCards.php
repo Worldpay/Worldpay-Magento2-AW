@@ -14,7 +14,12 @@ use Sapient\AccessWorldpay\Helper\Data;
 
 class SavedCards implements ResolverInterface
 {
-    
+    /**
+     * Constructor
+     *
+     * @param SavedTokenFactory $tokenfactory
+     * @param Data $worldpayHelper
+     */
     public function __construct(
         SavedTokenFactory $tokenfactory,
         Data $worldpayHelper
@@ -22,7 +27,16 @@ class SavedCards implements ResolverInterface
         $this->tokenfactory = $tokenfactory;
         $this->worldpayHelper = $worldpayHelper;
     }
-    
+    /**
+     * Resolver
+     *
+     * @param Field $field
+     * @param Context $context
+     * @param ResolveInfo $info
+     * @param array $value
+     * @param array $args
+     * @return array
+     */
     public function resolve(
         Field $field,
         $context,

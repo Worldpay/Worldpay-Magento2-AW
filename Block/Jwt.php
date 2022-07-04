@@ -6,14 +6,20 @@ use Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest;
 
 class Jwt extends \Magento\Framework\View\Element\Template
 {
+    /**
+     * @var \Sapient\AccessWorldpay\Helper\Data
+     */
     protected $helper;
     
     /**
-     * Jwt constructor.
-     * @param Create $helper
-     * @param array $data
+     * Constructor
+     *
+     * @param \Magento\Backend\Block\Template\Context $context
+     * @param \Magento\Checkout\Model\Session $checkoutSession
+     * @param \Magento\Quote\Api\CartRepositoryInterface $quoteRepository
+     * @param \Sapient\AccessWorldpay\Helper\Data $helper
+     * @param \Sapient\AccessWorldpay\Model\Request\PaymentServiceRequest $paymentservice
      */
-
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
         \Magento\Checkout\Model\Session $checkoutSession,
@@ -27,23 +33,33 @@ class Jwt extends \Magento\Framework\View\Element\Template
         $this->quoteRepository = $quoteRepository;
         parent::__construct($context);
     }
-
+    /**
+     * Get DDC Url
+     *
+     * @return string
+     */
     public function getDdcUrl()
     {
-        
-        //$quote = $this->quoteRepository->get($this->checkoutSession->getQuoteId());
         $mode = $this->_helper->getEnvironmentMode();
         $ddcurl =  $this->checkoutSession->getDdcUrl();
         return $ddcurl;
     }
-    
+    /**
+     * Get Jwt
+     *
+     * @return string
+     */
     public function getJWT()
     {
         $jwt = $this->checkoutSession->getDdcJwt();
        
         return $jwt;
     }
-    
+    /**
+     * Get Cookie
+     *
+     * @return string
+     */
     public function getCookie()
     {
         return $cookie = $this->_helper->getWorldpayAuthCookie();

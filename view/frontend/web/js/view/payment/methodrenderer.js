@@ -28,7 +28,7 @@ define(
 
         var methods = [
             {type: 'worldpay_cc', component: CCcomponent},
-            {type: 'apm', component: APMcomponent},
+            {type: 'worldpay_apm', component: APMcomponent},
             {type: 'worldpay_wallets', component: Walletscomponent},
             {type: 'hpp', component: Hppcomponent}
         ];

@@ -22,6 +22,7 @@ class OmsData extends \Magento\Framework\Model\AbstractModel
     /**
      * Load worldpay Order Details
      *
+     * @param string $order_id
      * @return Sapient\AccessWorldpay\Model\OmsData
      */
     public function loadByAccessWorldpayOrderCode($order_id)
@@ -36,6 +37,7 @@ class OmsData extends \Magento\Framework\Model\AbstractModel
     /**
      * Load worldpay Order Details
      *
+     * @param int $order_increment_id
      * @return Sapient\AccessWorldpay\Model\OmsData
      */
     public function loadByOrderIncrementId($order_increment_id)

@@ -12,9 +12,14 @@ use Magento\Framework\Phrase;
  */
 class CreditCardException extends \Magento\Framework\App\Config\Value
 {
-    
+    /**
+     * @var \Sapient\AccessWorldpay\Helper\GeneralException
+     */
     private $helper;
     
+    /**
+     * @var \Magento\Store\Model\StoreManagerInterface
+     */
     private $storeManager;
     
     /**
@@ -22,7 +27,9 @@ class CreditCardException extends \Magento\Framework\App\Config\Value
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
      * @param \Magento\Framework\App\Cache\TypeListInterface $cacheTypeList
-     * @param \Sapient\AccessWorldpay\Helper\MyAccountException $myaccountexception
+     * @param \Sapient\AccessWorldpay\Helper\CreditCardException $creditcardexception
+     * @param \Sapient\AccessWorldpay\Helper\GeneralException $helper
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data

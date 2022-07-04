@@ -20,12 +20,18 @@ class Savedcard extends \Magento\Framework\View\Element\Template
       * @var SerializerInterface
       */
     private $serializer;
+
     /**
      * constructor
      *
      * @param \Magento\Backend\Block\Template\Context $context
-     * @param \Sapient\AccessWorldpay\Model\SavedTokenFactory $savecard
+     * @param \Sapient\Worldpay\Model\SavedTokenFactory $savecard
      * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Sapient\Worldpay\Helper\Data $worldpayhelper
+     * @param SerializerInterface $serializer
+     * @param \Magento\Customer\Helper\Session\CurrentCustomerAddress $currentCustomerAddress
+     * @param \Magento\Customer\Model\Address\Config $addressConfig
+     * @param \Magento\Customer\Model\Address\Mapper $addressMapper
      * @param array $data
      */
     public function __construct(
@@ -50,6 +56,8 @@ class Savedcard extends \Magento\Framework\View\Element\Template
     }
 
     /**
+     * Get Save Card details
+     *
      * @return bool|\Sapient\AccessWorldpay\Model\ResourceModel\SavedToken\Collection
      */
     public function getSavedCard()
@@ -65,6 +73,8 @@ class Savedcard extends \Magento\Framework\View\Element\Template
     }
 
    /**
+    * Get Delete Url
+    *
     * @param \Sapient\AccessWorldpay\Model\SavedToken $saveCard
     * @return string
     */
@@ -74,6 +84,8 @@ class Savedcard extends \Magento\Framework\View\Element\Template
     }
 
     /**
+     * Get Edit Url
+     *
      * @param \Sapient\AccessWorldpay\Model\SavedToken $saveCard
      * @return string
      */
@@ -110,7 +122,12 @@ class Savedcard extends \Magento\Framework\View\Element\Template
             return $this->escapeHtml(__('You have not set a default billing address.'));
         }
     }
-    
+    /**
+     * Check Billing address
+     *
+     * @return string
+     */
+
     public function ifBillingAddressPresent()
     {
         $address = $this->currentCustomerAddress->getDefaultBillingAddress();
@@ -119,6 +136,12 @@ class Savedcard extends \Magento\Framework\View\Element\Template
         }
         return false;
     }
+    /**
+     * Check Account Label
+     *
+     * @param string $labelCode
+     * @return string
+     */
     public function getMyAccountLabels($labelCode)
     {
         $accdata = $this->serializer->unserialize($this->worlpayhelper->getMyAccountLabels());

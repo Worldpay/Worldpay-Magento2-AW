@@ -24,6 +24,7 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
      */
     protected $methodCodes = [
         'worldpay_cc',
+        'worldpay_apm',
         'worldpay_wallets'
     ];
 
@@ -52,12 +53,17 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
      * @var \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger
      */
     protected $wplogger;
-    
-    const CC_VAULT_CODE = "worldpay_cc_vault";
+
+    public const CC_VAULT_CODE = "worldpay_cc_vault";
     /**
      * @var SerializerInterface
      */
     private $serializer;
+
+    /**
+     * @var $fileDriver
+     */
+    protected $fileDriver;
 
     /**
      * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
@@ -67,8 +73,14 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
      * @param Cart $cart
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Backend\Model\Session\Quote $adminquotesession
+     * @param \Sapient\AccessWorldpay\Model\Utilities\PaymentMethods $paymentmethodutils
      * @param \Magento\Backend\Model\Auth\Session $backendAuthSession
+     * @param Repository $assetRepo
+     * @param RequestInterface $request
+     * @param Source $assetSource
+     * @param SerializerInterface $serializer
      * @param SavedTokenFactory $savedTokenFactory
+     * @param \Magento\Framework\Filesystem\Driver\File $fileDriver
      */
     public function __construct(
         \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
@@ -84,7 +96,8 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         RequestInterface $request,
         Source $assetSource,
         SerializerInterface $serializer,
-        SavedTokenFactory $savedTokenFactory
+        SavedTokenFactory $savedTokenFactory,
+        \Magento\Framework\Filesystem\Driver\File $fileDriver
     ) {
 
         $this->wplogger = $wplogger;
@@ -103,10 +116,11 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         $this->assetSource = $assetSource;
         $this->serializer = $serializer;
         $this->savedTokenFactory = $savedTokenFactory;
+        $this->fileDriver = $fileDriver;
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getConfig()
     {
@@ -120,6 +134,8 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                     $config['payment']['ccform']["availableTypes"][$code] = $this->getCcTypes();
                 } elseif ($code=='worldpay_wallets') {
                     $config['payment']['ccform']["availableTypes"][$code] = $this->getWalletsTypes($code);
+                } else {
+                    $config['payment']['ccform']["availableTypes"][$code] = $this->getApmTypes($code);
                 }
                 $config['payment']['ccform']["hasVerification"][$code] = true;
                 $config['payment']['ccform']["hasSsCardType"][$code] = false;
@@ -132,6 +148,8 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $config['payment']['ccform']['myaccountexceptions'] = $this->getMyAccountException();
                 $config['payment']['ccform']['creditcardexceptions'] = $this->getCreditCardException();
                 $config['payment']['ccform']['generalexceptions'] = $this->getGeneralException();
+                $config['payment']['ccform']['achdetails'] = $this->worldpayHelper->getACHDetails();
+                $config['payment']['ccform']['apmtitle'] = $this->getApmtitle();
                 $config['payment']['ccform']['cctitle'] = $this->getCCtitle();
                 $config['payment']['ccform']['isCvcRequired'] = $this->getCvcRequired();
                 $config['payment']['ccform']['saveCardAllowed'] = $this->worldpayHelper->getSaveCard();
@@ -174,14 +192,21 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 } else {
                     $config['payment']['general']['environmentMode'] = "TEST";
                 }
-                
+
                 /* Apple Configuration */
                 $config['payment']['ccform']['appleMerchantid'] = $this->worldpayHelper->appleMerchantId();
+                /* APM ACH Pay Narrative */
+                $config['payment']['ccform']['narrative'] = $this->worldpayHelper->getNarrative();
             }
         }
         return $config;
     }
 
+    /**
+     * Retrieve cc exception
+     *
+     * @return array
+     */
     public function getCreditCardException()
     {
         $ccdata= $this->unserializeValue($this->worldpayHelper->getCreditCardException());
@@ -194,11 +219,18 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['exception_messages'] = $value['exception_messages'];
                 $result['exception_module_messages'] = $value['exception_module_messages'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
+
+    /**
+     * Create a value from a storable representation
+     *
+     * @param int|float|string $value
+     * @return array
+     */
     protected function unserializeValue($value)
     {
         if (is_string($value) && !empty($value)) {
@@ -207,6 +239,12 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
             return [];
         }
     }
+
+    /**
+     * Get General Exception
+     *
+     * @return string
+     */
     public function getGeneralException()
     {
         $generaldata=$this->unserializeValue($this->worldpayHelper->getGeneralException());
@@ -219,12 +257,14 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['exception_messages'] = $value['exception_messages'];
                 $result['exception_module_messages'] = $value['exception_module_messages'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
     /**
+     * Retrieve list of cc integration mode details
+     *
      * @return String
      */
     public function getIntigrationMode()
@@ -233,6 +273,9 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
+     * Retrieve list of cc types
+     *
+     * @param string $paymentconfig
      * @return Array
      */
     public function getCcTypes($paymentconfig = "cc_config")
@@ -246,6 +289,8 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
+     * Check if the saved card option is enabled?
+     *
      * @return boolean
      */
     public function getIsSaveCardAllowed()
@@ -256,6 +301,11 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         return false;
     }
 
+    /**
+     * Retrieve list of months
+     *
+     * @return array
+     */
     public function getMonths()
     {
         return [
@@ -275,7 +325,9 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
-     * @return Array
+     * Retrieve a list of the next ten years
+     *
+     * @return array
      */
     public function getYears()
     {
@@ -288,7 +340,9 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
-     * @return Array
+     * Retrieve a list of the previos five years
+     *
+     * @return array
      */
     public function getStartYears()
     {
@@ -301,7 +355,9 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
-     * @return String
+     * Retrieve cc title
+     *
+     * @return string
      */
     public function getCCtitle()
     {
@@ -309,6 +365,18 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
+     * Retrieve apm title
+     *
+     * @return string
+     */
+    public function getApmtitle()
+    {
+        return $this->worldpayHelper->getApmTitle();
+    }
+
+    /**
+     * Check if CVC is required?
+     *
      * @return boolean
      */
     public function getCvcRequired()
@@ -317,6 +385,8 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
     }
 
     /**
+     * Retrieve payment method selection
+     *
      * @return string
      */
     public function getPaymentMethodSelection()
@@ -324,6 +394,11 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         return $this->worldpayHelper->getPaymentMethodSelection();
     }
 
+    /**
+     * Get icons for available payment methods
+     *
+     * @return array
+     */
     public function getIcons()
     {
         if (!empty($this->icons)) {
@@ -331,18 +406,42 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         }
         $ccTypes = $this->worldpayHelper->getCcTypes();
         $walletsTypes = $this->worldpayHelper->getWalletsTypes('worldpay_wallets');
-        $allTypePayments = array_unique(array_merge($ccTypes, $walletsTypes));
+        $apmTypes = $this->worldpayHelper->getApmTypes('worldpay_apm');
+        $allTypePayments = array_unique(array_merge($ccTypes, $apmTypes));
+        $allTypePayments = array_unique(array_merge($allTypePayments, $walletsTypes));
+
         foreach (array_keys($allTypePayments) as $code) {
             if (!array_key_exists($code, $this->icons)) {
                 $asset = $this->createAsset('Sapient_AccessWorldpay::images/cc/' . strtolower($code) . '.png');
                 $placeholder = $this->assetSource->findSource($asset);
+                               
                 if ($placeholder) {
-                    list($width, $height) = getimagesize($asset->getSourceFile());
+                    list($width, $height) = getimagesizefromstring($asset->getUrl());
                     $this->icons[$code] = [
                         'url' => $asset->getUrl(),
                         'width' => $width,
                         'height' => $height
                     ];
+                }
+                $personalisedLogoXmlPath = strtolower(str_replace('-', '_', $code));
+                if ($this->usePersonalisedLogo($personalisedLogoXmlPath) &&
+                $this->getPersonalisedLogoValues($personalisedLogoXmlPath)) {
+                     /* custom logo Path */
+                    $personalisedLogoPath = 'sapient_accessworldpay/images/';
+                    $urlMedia = $this->worldpayHelper->getBaseUrlMedia($personalisedLogoPath);
+                    $mediaDirectory = $this->worldpayHelper->getMediaDirectory($personalisedLogoPath);
+                    $absoulteMediaUrl = $urlMedia. $this->getPersonalisedLogoValues($personalisedLogoXmlPath);
+                    $mediaSourceUrl = $mediaDirectory. $this->getPersonalisedLogoValues($personalisedLogoXmlPath);
+                   
+                    if ($this->fileDriver->isExists($mediaSourceUrl)) {
+                        list($width, $height) = getimagesizefromstring($absoulteMediaUrl);
+                        $this->icons[$code] = [
+                            'url' => $absoulteMediaUrl,
+                            'width' => '50px',
+                            'height' => '30px',
+                            'vertical-align' => 'middle'
+                        ];
+                    }
                 }
             }
         }
@@ -360,6 +459,12 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         $params = array_merge(['_secure' => $this->request->isSecure()], $params);
         return $this->assetRepo->createAsset($fileId, $params);
     }
+
+    /**
+     * Retrieve my account exception
+     *
+     * @return array
+     */
     public function getMyAccountException()
     {
         $generaldata=$this->unserializeValue($this->worldpayHelper->getMyAccountException());
@@ -372,12 +477,17 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['exception_messages'] = $value['exception_messages'];
                 $result['exception_module_messages'] = $value['exception_module_messages'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
-    
+
+    /**
+     * Retrieve my account labels
+     *
+     * @return array
+     */
     public function getMyAccountLabels()
     {
         $generaldata=$this->unserializeValue($this->worldpayHelper->getMyAccountLabels());
@@ -390,12 +500,17 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['wpay_label_desc'] = $value['wpay_label_desc'];
                 $result['wpay_custom_label'] = $value['wpay_custom_label'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
-    
+
+    /**
+     * Retrieve checkout labels
+     *
+     * @return array
+     */
     public function getCheckoutLabels()
     {
         $generaldata=$this->unserializeValue($this->worldpayHelper->getCheckoutLabels());
@@ -408,11 +523,17 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['wpay_label_desc'] = $value['wpay_label_desc'];
                 $result['wpay_custom_label'] = $value['wpay_custom_label'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
+
+    /**
+     * Retrieve admin labels
+     *
+     * @return array
+     */
     public function getAdminLabels()
     {
         $generaldata=$this->unserializeValue($this->worldpayHelper->getAdminLabels());
@@ -425,12 +546,12 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
                 $result['wpay_label_desc'] = $value['wpay_label_desc'];
                 $result['wpay_custom_label'] = $value['wpay_custom_label'];
                 array_push($data, $result);
-            
+
             }
         }
         return $data;
     }
-    
+
     /**
      * Get Saved card List of customer
      */
@@ -444,14 +565,79 @@ class AccessWorldpayConfigProvider implements ConfigProviderInterface
         }
         return $savedCardsList;
     }
-    
+
+    /**
+     * Retrieve list of apm types
+     *
+     * @param string $code
+     * @return array
+     */
+    public function getApmTypes($code)
+    {
+        return $this->worldpayHelper->getApmTypes($code);
+    }
+
+    /**
+     * Retrieve list of wallets types
+     *
+     * @param string $code
+     * @return array
+     */
     public function getWalletsTypes($code)
     {
         return $this->worldpayHelper->getWalletsTypes($code);
     }
-    
+
+    /**
+     * Retrieve wallets title
+     *
+     * @return string
+     */
     public function getWalletstitle()
     {
         return $this->worldpayHelper->getWalletsTitle();
+    }
+    /**
+     * Get logo uploaded file value
+     *
+     * @param string $code
+     * @return string
+     */
+    public function getPersonalisedLogoValues($code)
+    {
+        $ccDataConfig = $this->worldpayHelper->getPersonalisedCClogo($code);
+        if (!empty($ccDataConfig)) {
+            return $ccDataConfig;
+        }
+        $apmDataConfig = $this->worldpayHelper->getPersonalisedApmlogo($code);
+        if (!empty($apmDataConfig)) {
+            return $apmDataConfig;
+        }
+        $walletDataConfig = $this->worldpayHelper->getPersonalisedWalletlogo($code);
+        if (!empty($walletDataConfig)) {
+            return $walletDataConfig;
+        }
+        return null;
+    }
+
+    /**
+     * Check Logo config enabled
+     *
+     * @param string $code
+     * @return bool
+     */
+    public function usePersonalisedLogo($code)
+    {
+        if ($this->worldpayHelper->isPersonalisedPaymentLogoEnabled()) {
+            if ($this->worldpayHelper->isCcLogoConfigEnabled($code)) {
+                return true;
+            } elseif ($this->worldpayHelper->isApmLogoConfigEnabled($code)) {
+                return true;
+            } elseif ($this->worldpayHelper->isWalletLogoConfigEnabled($code)) {
+                return true;
+            }
+            return false;
+        }
+        return false;
     }
 }

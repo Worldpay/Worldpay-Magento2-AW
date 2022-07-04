@@ -8,7 +8,7 @@
         <referenceContainer name="content">
              <block class="Sapient\AccessWorldpay\Block\Checkout\Hpp\Iframe" name="worldpay.checkout.hpp.iframe"/>
             <block class="Magento\Framework\View\Element\Template" name="worldpay.checkout.hpp.application"
-                   template="Sapient_AccessWorldpay::checkout/hpp/application.phtml" cacheable="false">
+                   template="Sapient_AccessWorldpay::checkout/hpp/application.phtml">
                  <block class="Sapient\AccessWorldpay\Block\Checkout\Hpp\Json\Config" name="worldpay.checkout.hpp.configuration" /> 
             </block>
         </referenceContainer>

@@ -22,7 +22,7 @@ class PartialSettlements extends \Magento\Framework\Model\AbstractModel
     /**
      * Load worldpay Order Details
      *
-     * @return Sapient\AccessWorldpay\Model\OmsData
+     * @param int $order_id
      */
     public function loadByAccessWorldpayOrderCode($order_id)
     {
@@ -36,7 +36,7 @@ class PartialSettlements extends \Magento\Framework\Model\AbstractModel
     /**
      * Load worldpay Order Details
      *
-     * @return Sapient\AccessWorldpay\Model\OmsData
+     * @param int $order_increment_id
      */
     public function loadByOrderIncrementId($order_increment_id)
     {

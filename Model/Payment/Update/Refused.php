@@ -4,21 +4,25 @@
  */
 namespace Sapient\AccessWorldpay\Model\Payment\Update;
 
-use Sapient\AccessWorldpay\Model\Payment\Update;
+use Sapient\AccessWorldpay\Model\Payment\UpdateInterface;
 use Sapient\AccessWorldpay\Model\Payment\Update\Base;
 
-class Refused extends Base implements Update
+class Refused extends Base implements UpdateInterface
 {
-    /** @var \Sapient\AccessWorldpay\Helper\Data */
+    /**
+     * @var $_configHelper
+     */
     private $_configHelper;
+
     /**
      * Constructor
-     * @param \Sapient\AccessWorldpay\Model\Payment\State $paymentState
+     *
+     * @param \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState
      * @param \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment
      * @param \Sapient\AccessWorldpay\Helper\Data $configHelper
      */
     public function __construct(
-        \Sapient\AccessWorldpay\Model\Payment\State $paymentState,
+        \Sapient\AccessWorldpay\Model\Payment\StateInterface $paymentState,
         \Sapient\AccessWorldpay\Model\Payment\WorldPayPayment $worldPayPayment,
         \Sapient\AccessWorldpay\Helper\Data $configHelper
     ) {
@@ -26,6 +30,14 @@ class Refused extends Base implements Update
         $this->_worldPayPayment = $worldPayPayment;
         $this->_configHelper = $configHelper;
     }
+
+   /**
+    * Apply update payment status
+    *
+    * @param array $payment
+    * @param array $order
+    * @return string
+    */
     public function apply($payment, $order = null)
     {
         if (!empty($order)) {
@@ -36,13 +48,15 @@ class Refused extends Base implements Update
     }
 
     /**
+     * Get Allowed Payment Status
+     *
      * @return array
      */
     protected function _getAllowedPaymentStatuses()
     {
         return [
-            \Sapient\AccessWorldpay\Model\Payment\State::STATUS_SENT_FOR_AUTHORISATION,
-            \Sapient\AccessWorldpay\Model\Payment\State::STATUS_AUTHORISED
+            \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_SENT_FOR_AUTHORISATION,
+            \Sapient\AccessWorldpay\Model\Payment\StateInterface::STATUS_AUTHORISED
         ];
     }
 }

@@ -19,6 +19,10 @@ class Button extends Template
      * @var Config
      */
     private $instantPurchaseConfig;
+
+    /**
+     * @var ScopeConfigInterface
+     */
     protected $_scopeConfig;
     /**
      * @var SessionManagerInterface
@@ -26,9 +30,12 @@ class Button extends Template
     protected $session;
 
     /**
-     * Button constructor.
-     * @param Context $context
-     * @param Config $instantPurchaseConfig
+     * Constructor
+     *
+     * @param \Magento\Framework\View\Element\Template\Context $context
+     * @param \Magento\InstantPurchase\Model\Config $instantPurchaseConfig
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param \Magento\Framework\Session\SessionManagerInterface $session
      * @param array $data
      */
     public function __construct(

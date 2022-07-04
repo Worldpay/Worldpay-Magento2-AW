@@ -11,9 +11,24 @@ namespace Sapient\AccessWorldpay\Model\JsonBuilder;
 class DeviceDataCollection
 {
     
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * Order payment details
+     *
+     * @var array
+     */
     private $paymentDetails;
     
+    /**
+     * Build jsonObj for processing Request
+     *
+     * @param string $orderCode
+     * @param array $paymentDetails
+     * @return string
+     */
     public function build(
         $orderCode,
         $paymentDetails
@@ -24,6 +39,11 @@ class DeviceDataCollection
         return json_encode($jsonData);
     }
     
+    /**
+     * Build an order data array
+     *
+     * @return array
+     */
     private function _addOrderElement()
     {
         $orderData = [];
@@ -39,11 +59,21 @@ class DeviceDataCollection
         return $orderData;
     }
     
+    /**
+     * Add order code to jsonObj
+     *
+     * @return array
+     */
     private function _addTransactionRef()
     {
         return $this->orderCode;
     }
     
+    /**
+     * Add merchant entity referecne to jsonObj
+     *
+     * @return array
+     */
     private function _addMerchantInfo()
     {
         $merchantData = ["entity" =>$this->paymentDetails['entityRef']];
@@ -57,6 +87,11 @@ class DeviceDataCollection
 //        return $instruction;
 //    }
     
+    /**
+     * Add payment info data's to jsonObj
+     *
+     * @return array
+     */
     private function _addPaymentInfo()
     {
         if (isset($this->paymentDetails['token_url'])) {

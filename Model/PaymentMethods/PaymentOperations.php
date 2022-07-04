@@ -1,10 +1,17 @@
 <?php
-
+/**
+ * @copyright 2017 Sapient
+ */
 namespace Sapient\AccessWorldpay\Model\PaymentMethods;
-
+ 
 class PaymentOperations extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractMethod
 {
-
+    /**
+     * Update status for void order abstract method
+     *
+     * @param array $order
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
     public function updateOrderStatus($order)
     {
         if (!empty($order)) {
@@ -25,7 +32,13 @@ class PaymentOperations extends \Sapient\AccessWorldpay\Model\PaymentMethods\Abs
             throw new \Magento\Framework\Exception\LocalizedException(__('No Payment'));
         }
     }
-
+    /**
+     * Update Order
+     *
+     * @param string $paymentStatus
+     * @param array $mageOrder
+     * @return $this
+     */
     public function updateOrder($paymentStatus, $mageOrder)
     {
         switch ($paymentStatus) {
@@ -59,8 +72,46 @@ class PaymentOperations extends \Sapient\AccessWorldpay\Model\PaymentMethods\Abs
                 $mageOrder->setStatus(\Magento\Sales\Model\Order::STATE_CANCELED);
                 $mageOrder->save();
                 break;
+            case 'REVERSED':
+                $mageOrder->setState(\Magento\Sales\Model\Order::STATE_CLOSED, true);
+                $mageOrder->setStatus(\Magento\Sales\Model\Order::STATE_CLOSED);
+                $mageOrder->save();
+                break;
             default:
                 break;
+        }
+    }
+    /**
+     * Can Payment Reversal abstract method
+     *
+     * @param array $order
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    public function canPaymentReversal($order)
+    {
+        $payment = $order->getPayment();
+        $mageOrder = $order->getOrder();
+        $worldPayPayment = $this->worldpaypaymentmodel->loadByPaymentId($mageOrder->getIncrementId());
+        $paymenttype = $worldPayPayment->getPaymentType();
+        if ($paymenttype === 'ACH_DIRECT_DEBIT-SSL'
+            && !(strtoupper($worldPayPayment->getPaymentStatus()) === 'REVERSED')) {
+            $xml = $this->paymentservicerequest->paymentReversal($mageOrder->getIncrementId());
+            $xml = new \SimpleXmlElement($xml);
+            $payment->setTransactionId(time());
+
+            if ($xml && isset($xml->_links)) {
+                $responseLinks = $xml->_links;
+                if (isset($responseLinks->events->href)) {
+                    $eventsLink = $responseLinks->events->href;
+                    $eventResponsexml = $this->paymentservicerequest
+                    ->eventInquiry($mageOrder->getIncrementId(), $eventsLink);
+                    $eventResponsexml = new \SimpleXmlElement($eventResponsexml);
+                }
+            }
+        } else {
+            throw new \Magento\Framework\Exception\LocalizedException(__('The reversal action is not available.'
+                    . 'Possible reason this was already executed for this order. '
+                    . 'Please check Payment Status below for confirmation.'));
         }
     }
 }

@@ -9,12 +9,27 @@ namespace Sapient\AccessWorldpay\Model\JsonBuilder;
  */
 class Capture
 {
-    const EXPONENT = 2;
+    public const EXPONENT = 2;
 
+    /**
+     * @var string
+     */
     private $merchantCode;
+    /**
+     * @var string
+     */
     private $orderCode;
+    /**
+     * @var string
+     */
     private $currencyCode;
+    /**
+     * @var float
+     */
     private $amount;
+    /**
+     * @var string
+     */
     private $requestType;
 
     /**
@@ -24,6 +39,7 @@ class Capture
      * @param string $orderCode
      * @param string $currencyCode
      * @param float $amount
+     * @param string $requestType
      * @return SimpleXMLElement $xml
      */
     public function build($merchantCode, $orderCode, $currencyCode, $amount, $requestType)
@@ -59,6 +75,7 @@ class Capture
     /**
      * Add amount to Json
      *
+     * @return array
      */
     private function _addValue()
     {
@@ -69,6 +86,8 @@ class Capture
     }
 
     /**
+     * Returns the rounded value of num to specified precision
+     *
      * @param float $amount
      * @return int
      */

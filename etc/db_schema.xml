@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+  <table name="worldpay_payment" resource="default" engine="innodb" comment="Payment Table">
+    <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Id"/>
+    <column xsi:type="varchar" name="order_id"  nullable="false"  comment="Order Id" length="25"/>
+    <column xsi:type="varchar" name="payment_status" nullable="true" length="255" comment="Payment Status"/>
+    <column xsi:type="varchar" name="payment_model" nullable="false" length="25" comment="Payment Model"/>
+    <column xsi:type="varchar" name="payment_type" nullable="false" length="255" comment="Payment Type"/>
+    <column xsi:type="boolean" name="mac_verified" nullable="true" comment="MAC Verified"/>
+    <column xsi:type="varchar" name="merchant_id" nullable="true" length="255" comment="Merchant Id"/>
+    <column xsi:type="boolean" name="3d_verified" nullable="true" comment="3D Secure Verified"/>
+    <column xsi:type="int" name="risk_score" padding="11" unsigned="false" nullable="true" identity="false" comment="Risk Score"/>
+    <column xsi:type="text" name="method" nullable="true" comment="Method"/>
+    <column xsi:type="text" name="card_number" nullable="true" comment="Card Number"/>
+    <column xsi:type="text" name="avs_result" nullable="true" comment="AVS Result"/>
+    <column xsi:type="text" name="cvc_result" nullable="true" comment="CVC Result"/>
+    <column xsi:type="text" name="3d_secure_result" nullable="true" comment="3D Secure Result"/>
+    <column xsi:type="varchar" name="worldpay_order_id" nullable="true" length="40" comment="WorldPay Order Id"/>
+    <column xsi:type="varchar" name="risk_provider" nullable="true" length="24" comment="Risk Provider"/>
+    <column xsi:type="decimal" name="risk_provider_score" scale="4" precision="8" unsigned="false" nullable="true" comment="Risk Provider Score"/>
+    <column xsi:type="varchar" name="risk_provider_id" nullable="true" length="20" comment="Risk Provider Id"/>
+    <column xsi:type="varchar" name="risk_provider_threshold" nullable="true" length="4" comment="Risk Provider Threshold"/>
+    <column xsi:type="varchar" name="risk_provider_final" nullable="true" length="4" comment="Risk Provider Final"/>
+    <column xsi:type="varchar" name="aav_address_result_code" nullable="true" length="25" comment="AAV Address Result Code"/>
+    <column xsi:type="varchar" name="avv_postcode_result_code" nullable="true" length="25" comment="AAV Postcode Result Code"/>
+    <column xsi:type="varchar" name="aav_cardholder_name_result_code" nullable="true" length="25" comment="AAV Cardholder Name Result Code"/>
+    <column xsi:type="varchar" name="aav_telephone_result_code" nullable="true" length="25" comment="AAV Telephone Result Code"/>
+    <column xsi:type="varchar" name="aav_email_result_code" nullable="true" length="25" comment="AAV Email Result Code"/>
+    <column xsi:type="varchar" name="interaction_type" nullable="true" length="25" comment="Interaction Type"/>
+    <column xsi:type="text" name="exemption_outcome" nullable="true" comment="Exemption Outcome"/>
+    <column xsi:type="text" name="exemption_type" nullable="true" comment="Exemption Type"/>
+    <column xsi:type="text" name="risk_profile" nullable="true" comment="Risk Profile"/>
+    <constraint xsi:type="primary" referenceId="PRIMARY">
+      <column name="id"/>
+    </constraint>
+    <index referenceId="WORLDPAY_PAYMENT_ORDER_ID" indexType="btree">
+      <column name="order_id"/>
+    </index>
+    <index referenceId="WORLDPAY_PAYMENT_WORLDPAY_ORDER_ID" indexType="btree">
+      <column name="worldpay_order_id"/>
+    </index>
+  </table>
+  <table name="accessworldpay_verifiedtoken" resource="default" engine="innodb" comment="Accessworldpay Verifiedtoken Table">
+    <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Id"/>
+    <column xsi:type="text" name="token_id" nullable="false"  comment="Token Id"/>
+    <column xsi:type="varchar" name="token" nullable="false" length="255" comment="Token"/>
+    <column xsi:type="text" name="description" nullable="false"  comment="Description"/>
+    <column xsi:type="text" name="transaction_reference" nullable="false"  comment="Transaction Reference"/>
+    <column xsi:type="date" name="token_expiry_date" nullable="false"  comment="Token Expiry Date"/>
+    <column xsi:type="text" name="namespace" nullable="false"  comment="Token Reason"/>
+    <column xsi:type="text" name="card_number" nullable="false" comment="Obfuscated Card number"/>
+    <column xsi:type="text" name="cardholder_name" nullable="true" comment="Card Holder name"/>
+    <column xsi:type="int" name="card_expiry_month" nullable="false" comment="Card Expiry Month"/>
+    <column xsi:type="int" name="card_expiry_year" nullable="false" comment="Card Expiry Year"/>
+    <column xsi:type="text" name="method" nullable="true" comment="Payment method used"/>
+    <column xsi:type="int" name="customer_id" padding="10" nullable="false" unsigned="true" comment="Customer Id"/>
+    <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+    <column xsi:type="text" name="cardonfile_auth_link" nullable="false"  comment="Cardonfile Auth Link"/>
+    <column xsi:type="text" name="card_brand" nullable="false"  comment="Card Brand"/>
+    <column xsi:type="boolean" name="disclaimer_flag" nullable="false" comment="Disclaimer Flag"/>
+    <constraint xsi:type="primary" referenceId="PRIMARY">
+      <column name="id"/>
+    </constraint>
+    <index referenceId="ACCESSWORLDPAY_VERIFIEDTOKEN_TOKEN" indexType="btree">
+      <column name="token"/>
+    </index>
+    <index referenceId="ACCESSWORLDPAY_VERIFIEDTOKEN_CUSTOMER_ID" indexType="btree">
+      <column name="customer_id"/>
+    </index>
+  </table>
+  <table name="worldpay_notification_history" resource="default" engine="innodb" comment="Worldpay Notification History Table">
+  <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Id"/>
+  <column xsi:type="varchar" name="order_id"  nullable="false"  comment="AccessWorldpay order id" length="255"/>
+  <column xsi:type="varchar" name="status"  nullable="false"  comment="Status" length="255"/>
+  <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+  <constraint xsi:type="primary" referenceId="PRIMARY">
+      <column name="id"/>
+    </constraint>
+    <index referenceId="WORLDPAY_NOTIFICATION_HISTORY_ORDER_ID" indexType="btree">
+      <column name="order_id"/>
+    </index>
+  </table>
+  <table name="awp_oms_params" resource="default" engine="innodb" comment="Awp Oms Params Table">
+  <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity Id"/>
+  <column xsi:type="varchar" name="order_increment_id"  nullable="true"  comment="AccessWorldpay order id" length="40"/>
+  <column xsi:type="varchar" name="awp_order_code"  nullable="true"  comment="AWP Order Code" length="40"/>
+  <column xsi:type="varchar" name="awp_payment_status"  nullable="true"  comment="Payment Status" length="255"/>
+  <column xsi:type="text" name="awp_cancel_param"  nullable="true"  comment="Payment Cancel Parameter"/>
+  <column xsi:type="text" name="awp_settle_param"  nullable="true"  comment="Payment Settle Parameter"/>
+  <column xsi:type="text" name="awp_partial_settle_param"  nullable="true"  comment="Payment Partial Settle Parameter"/>
+  <column xsi:type="text" name="awp_events_param"  nullable="true"  comment="Payment Events Parameter"/>
+  <column xsi:type="text" name="awp_reversal_param"  nullable="true"  comment="Payment Reversal Parameter"/>
+  <column xsi:type="text" name="awp_refund_param"  nullable="true"  comment="Payment Refund Parameter"/>
+  <column xsi:type="text" name="awp_partial_refund_param"  nullable="true"  comment="Payment Partial Refund Parameter"/>
+  <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+  <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+  <constraint xsi:type="primary" referenceId="PRIMARY">
+      <column name="entity_id"/>
+    </constraint>
+  </table>
+  <table name="awp_oms_partial_settlements" resource="default" engine="innodb" comment="Awp Oms Partial Settlements Table">
+  <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity Id"/>
+  <column xsi:type="varchar" name="order_increment_id"  nullable="true"  comment="AccessWorldpay order id" length="40"/>
+  <column xsi:type="varchar" name="order_invoice_id"  nullable="true"  comment="Order Invoice Id" length="40"/>
+  <column xsi:type="varchar" name="order_item_id"  nullable="true"  comment="Order Item Id" length="40"/>
+  <column xsi:type="varchar" name="awp_order_code"  nullable="true"  comment="AWP Order Code" length="40"/>
+  <column xsi:type="text" name="awp_lineitem_cancel_param"  nullable="true"  comment="Line Item Payment Cancel Parameter"/>
+  <column xsi:type="text" name="awp_lineitem_refund_param"  nullable="true"  comment="Line Item Refund Parameter"/>
+  <column xsi:type="text" name="awp_lineitem_partial_refund_param"  nullable="true"  comment="Line Item partial Refund Parameter"/>
+  <column xsi:type="text" name="awp_lineitem_partial_settle_param"  nullable="true"  comment="Line Item Partial Settle Parameter"/>
+  <column xsi:type="text" name="awp_lineitem_events_param"  nullable="true"  comment="Line Item Payment Events Parameter"/>
+  <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+  <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+  <constraint xsi:type="primary" referenceId="PRIMARY">
+      <column name="entity_id"/>
+    </constraint>
+  </table>
+</schema>

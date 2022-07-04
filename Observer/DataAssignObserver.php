@@ -39,7 +39,15 @@ class DataAssignObserver extends AbstractDataAssignObserver
         'customer_id',
         'is_graphql',
         'googlepayToken',
-        'applepayToken'
+        'applepayToken',
+        'cc_type',
+        'ach_account',
+        'ach_accountNumber',
+        'ach_routingNumber',
+        'ach_checknumber',
+        'ach_companyname',
+        'ach_emailaddress',
+        'statementNarrative'
     ];
 
     /**
@@ -47,9 +55,11 @@ class DataAssignObserver extends AbstractDataAssignObserver
      */
     public function execute(Observer $observer)
     {
-      
         $data = $this->readDataArgument($observer);
         $additionalData = $data->getData(PaymentInterface::KEY_ADDITIONAL_DATA);
+        $additionalInformationData = isset($additionalData['additional_information'])
+                ? $additionalData['additional_information'] : null;
+
         if (!is_array($additionalData)) {
             return;
         }
@@ -57,12 +67,23 @@ class DataAssignObserver extends AbstractDataAssignObserver
         $paymentInfo = $this->readPaymentModelArgument($observer);
 
         foreach ($this->additionalInformationList as $additionalInformationKey) {
-            if (isset($additionalData[$additionalInformationKey])) {
-                $paymentInfo->setAdditionalInformation(
-                    $additionalInformationKey,
-                    $additionalData[$additionalInformationKey]
-                );
+            if (!empty($additionalInformationData)) {
+                if (isset($additionalInformationData[$additionalInformationKey])) {
+                    $this->setData($paymentInfo, $additionalInformationKey, $additionalInformationData);
+                }
+            } else {
+                if (isset($additionalData[$additionalInformationKey])) {
+                    $this->setData($paymentInfo, $additionalInformationKey, $additionalData);
+                }
             }
         }
+    }
+
+    public function setData($paymentInfo, $key, $additionalData)
+    {
+        $paymentInfo->setAdditionalInformation(
+            $key,
+            $additionalData[$key]
+        );
     }
 }

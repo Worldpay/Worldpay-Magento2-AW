@@ -19,6 +19,8 @@ class MethodList
         $this->methodCodes = $methodCodes;
     }
     /**
+     * Get method code
+     *
      * @return array
      */
     public function get()

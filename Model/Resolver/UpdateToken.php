@@ -19,6 +19,17 @@ use Sapient\AccessWorldpay\Helper\Data;
 
 class UpdateToken implements ResolverInterface
 {
+    /**
+     * Constructor
+     *
+     * @param PaymentTokenManagementInterface $paymentTokenManagement
+     * @param PaymentTokenRepositoryInterface $paymentTokenRepository
+     * @param Service $tokenservice
+     * @param SavedTokenFactory $savedtoken
+     * @param WorldpayToken $worldpayToken
+     * @param \Magento\Framework\Stdlib\DateTime\DateTime $dateTime
+     * @param Data $worldpayHelper
+     */
     public function __construct(
         PaymentTokenManagementInterface $paymentTokenManagement,
         PaymentTokenRepositoryInterface $paymentTokenRepository,
@@ -36,7 +47,16 @@ class UpdateToken implements ResolverInterface
         $this->dateTime = $dateTime;
         $this->worldpayHelper = $worldpayHelper;
     }
-    
+    /**
+     * Resolver
+     *
+     * @param Field $field
+     * @param Context $context
+     * @param ResolveInfo $info
+     * @param array $value
+     * @param array $args
+     * @return array
+     */
     public function resolve(
         Field $field,
         $context,
@@ -124,7 +144,14 @@ class UpdateToken implements ResolverInterface
         
         return ['card' => $card];
     }
-    
+    /**
+     * Update Token
+     *
+     * @param SavedToken $model
+     * @param int $customerId
+     * @param WorldPayToken $tokenUpdateData
+     * @return $this
+     */
     protected function updateToken($model, $customerId, $tokenUpdateData)
     {
         $card =[];
@@ -162,7 +189,13 @@ class UpdateToken implements ResolverInterface
             throw new GraphQlInputException(__($tokenexpirydateresponse['message']));
         }
     }
-    
+    /**
+     * Get Token Model
+     *
+     * @param SavedToken $model
+     * @param WorldPayToken $tokenUpdateData
+     * @return $this
+     */
     protected function _getTokenModel($model, $tokenUpdateData)
     {
         if (trim(strtoupper($model->getCardholderName()))
@@ -174,7 +207,13 @@ class UpdateToken implements ResolverInterface
        
         return $model;
     }
-    
+    /**
+     * Apply Vault Token Update
+     *
+     * @param SavedToken $model
+     * @param int $customerid
+     * @return $this
+     */
     protected function _applyVaultTokenUpdate($model, $customerid)
     {
         $existingVaultPaymentToken = $this->paymentTokenManagement->getByGatewayToken(
@@ -184,7 +223,13 @@ class UpdateToken implements ResolverInterface
         );
         $this->_saveVaultToken($existingVaultPaymentToken, $model);
     }
-    
+    /**
+     * Save Vault Token
+     *
+     * @param PaymentTokenInterface $vaultToken
+     * @param SavedToken $model
+     * @return $this
+     */
     protected function _saveVaultToken(PaymentTokenInterface $vaultToken, $model)
     {
         $vaultToken->setTokenDetails($this->convertDetailsToJSON([
@@ -198,17 +243,32 @@ class UpdateToken implements ResolverInterface
             throw new GraphQlInputException(__($e->getMessage()), $e);
         }
     }
-
+    /**
+     * Get Expiration Month And Year
+     *
+     * @param SavedToken $token
+     * @return string
+     */
     public function getExpirationMonthAndYear($token)
     {
         return $token->getCardExpiryMonth().'/'.$token->getCardExpiryYear();
     }
-
+    /**
+     * Get Last Four Numbers
+     *
+     * @param SavedToken $number
+     * @return int
+     */
     public function getLastFourNumbers($number)
     {
         return substr($number, -4);
     }
-
+    /**
+     * Convert Details to JSON
+     *
+     * @param array $details
+     * @return json
+     */
     private function convertDetailsToJSON($details)
     {
         $json = \Zend_Json::encode($details);

@@ -9,6 +9,11 @@ use Magento\Checkout\Model\Cart as CustomerCart;
 class Service
 {
 
+    /**
+     * @param \Magento\Checkout\Model\Session $checkoutsession
+     * @param CustomerCart $cart
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
+     */
     public function __construct(
         \Magento\Checkout\Model\Session $checkoutsession,
         CustomerCart $cart,
@@ -20,11 +25,19 @@ class Service
         $this->wplogger = $wplogger;
     }
     
+    /**
+     * Get ClearSession
+     */
     public function clearSession()
     {
         $this->checkoutsession->clearQuote();
     }
 
+    /**
+     * Get Reactivate QuoteForOrder
+     *
+     * @param \Sapient\AccessWorldpay\Model\Order $order
+     */
     public function reactivateQuoteForOrder(\Sapient\AccessWorldpay\Model\Order $order)
     {
 

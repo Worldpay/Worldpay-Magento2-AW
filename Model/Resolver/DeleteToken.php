@@ -19,6 +19,16 @@ use Sapient\AccessWorldpay\Helper\Data;
 
 class DeleteToken implements ResolverInterface
 {
+    /**
+     * Constructor
+     *
+     * @param PaymentTokenManagementInterface $paymentTokenManagement
+     * @param PaymentTokenRepositoryInterface $paymentTokenRepository
+     * @param Service $tokenservice
+     * @param SavedTokenFactory $savedtoken
+     * @param WorldpayToken $worldpayToken
+     * @param Data $worldpayHelper
+     */
     public function __construct(
         PaymentTokenManagementInterface $paymentTokenManagement,
         PaymentTokenRepositoryInterface $paymentTokenRepository,
@@ -34,7 +44,16 @@ class DeleteToken implements ResolverInterface
         $this->worldpayToken = $worldpayToken;
         $this->worldpayHelper = $worldpayHelper;
     }
-    
+    /**
+     * Resolver
+     *
+     * @param Field $field
+     * @param Context $context
+     * @param ResolveInfo $info
+     * @param array $value
+     * @param array $args
+     * @return array
+     */
     public function resolve(
         Field $field,
         $context,
@@ -74,7 +93,13 @@ class DeleteToken implements ResolverInterface
         
         return ['result' => $result];
     }
-    
+    /**
+     * Vault Token Delete
+     *
+     * @param SavedTokenFactory $tokenModel
+     * @param int $customerId
+     * @return $this
+     */
     protected function _applyVaultTokenDelete($tokenModel, $customerId)
     {
         $paymentToken = $this->paymentTokenManagement->getByGatewayToken($tokenModel, 'worldpay_cc', $customerId);
@@ -87,7 +112,13 @@ class DeleteToken implements ResolverInterface
             throw new GraphQlInputException(__($this->worldpayHelper->getMyAccountSpecificexception('GMCAM5')));
         }
     }
-    
+    /**
+     * Delete Token
+     *
+     * @param SavedTokenFactory $model
+     * @param int $customerId
+     * @return bool
+     */
     protected function deleteToken($model, $customerId)
     {
         

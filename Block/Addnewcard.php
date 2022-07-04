@@ -58,7 +58,11 @@ class Addnewcard extends \Magento\Framework\View\Element\Template
         $this->_storeManager = $storeManager;
         parent::__construct($context, $data);
     }
-    
+    /**
+     * Get Cvc Enabled
+     *
+     * @return string
+     */
     public function requireCvcEnabled()
     {
         return $this->worldpayHelper->isCcRequireCVC();
@@ -73,24 +77,35 @@ class Addnewcard extends \Magento\Framework\View\Element\Template
     {
         return $this->_storeManager->getStore()->getCode();
     }
-    
+    /**
+     * Get SessionId
+     *
+     * @return string
+     */
     public function getSessionId()
     {
         return $this->_customerSession->getSessionId();
     }
-    
+    /**
+     * Get Customer Token
+     *
+     * @return string
+     */
     public function getCustomerToken()
     {
         $customerId = $this->_customerSession->getCustomer()->getId();
         $customerToken = $this->_tokenModelFactory->create();
         return $customerToken->createCustomerToken($customerId)->getToken();
     }
-    
+    /**
+     * Get Primary Billing Address
+     *
+     * @return string
+     */
     public function getPrimaryBillingAddressHtml()
     {
         /** @var \Magento\Customer\Block\Address\Renderer\RendererInterface $renderer */
         $address = $this->currentCustomerAddress->getDefaultBillingAddress();
-        
         if ($address) {
             $renderer = $this->_addressConfig->getFormatByCode('html')->getRenderer();
             return $renderer->renderArray($this->addressMapper->toFlatArray($address));
@@ -98,13 +113,16 @@ class Addnewcard extends \Magento\Framework\View\Element\Template
             return $this->escapeHtml(__('You have not set a default billing address.'));
         }
     }
-    
+    /**
+     * Get CreditCardType
+     *
+     * @return string
+     */
     public function getCCtypes()
     {
         $cctypes = $this->worldpayHelper->getCcTypes();
         return $cctypes;
     }
-    
     /**
      * Helps to build year html dropdown
      *
@@ -121,7 +139,6 @@ class Addnewcard extends \Magento\Framework\View\Element\Template
         }
         return self::$_months;
     }
-    
     /**
      * Helps to build year html dropdown
      *
@@ -173,11 +190,23 @@ class Addnewcard extends \Magento\Framework\View\Element\Template
         return $this->worldpayHelper->isCcRequireCVC();
     }
     
+    /**
+     * Get Account Alert
+     *
+     * @param string $alertCode
+     * @return string
+     */
     public function getAccountAlert($alertCode)
     {
         return $this->worldpayHelper->getMyAccountSpecificexception($alertCode);
     }
-    
+
+    /**
+     * Get Account Label
+     *
+     * @param string $labelCode
+     * @return string
+     */
     public function getAccountLabelbyCode($labelCode)
     {
         return $this->worldpayHelper->getAccountLabelbyCode($labelCode);

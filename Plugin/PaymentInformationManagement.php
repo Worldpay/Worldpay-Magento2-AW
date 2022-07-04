@@ -44,8 +44,8 @@ class PaymentInformationManagement
         CartManagementInterface $cartManagement,
         AccessWorldpayLogger $logger,
         MethodList $methodList,
-        $checkMethods = true,
-        \Sapient\AccessWorldpay\Helper\Data $worldpayHelper
+        \Sapient\AccessWorldpay\Helper\Data $worldpayHelper,
+        $checkMethods = true
     ) {
         $this->cartManagement = $cartManagement;
         $this->logger = $logger;

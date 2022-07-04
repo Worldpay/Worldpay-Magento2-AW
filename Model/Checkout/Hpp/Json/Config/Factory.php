@@ -18,13 +18,16 @@ class Factory
     private $store;
 
     /**
-     * @param StoreManagerInterface $storeManager,
-     * @param \Sapient\AccessWorldpay\Model\Checkout\Hpp\State $hppstate,
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-     * @param Repository $assetrepo,
-     * @param RequestInterface $request,
-     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger,
+     * @param StoreManagerInterface $storeManager
+     * @param \Sapient\AccessWorldpay\Model\Checkout\Hpp\State $hppstate
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param Repository $assetrepo
+     * @param RequestInterface $request
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
      * @param \Sapient\AccessWorldpay\Helper\Data $worldpayhelper
+     * @param \Magento\Quote\Api\CartRepositoryInterface $quoteRepository
+     * @param \Magento\Sales\Model\Order $mageOrder
+     * @param array $servicesservices
      */
     public function __construct(
         StoreManagerInterface $storeManager,
@@ -36,7 +39,7 @@ class Factory
         \Sapient\AccessWorldpay\Helper\Data $worldpayhelper,
         \Magento\Quote\Api\CartRepositoryInterface $quoteRepository,
         \Magento\Sales\Model\Order $mageOrder,
-        $services = []
+        $servicesservices = []
     ) {
         $this->scopeConfig = $scopeConfig;
         $this->assetRepo = $assetrepo;
@@ -50,7 +53,8 @@ class Factory
         } else {
             $this->store = $storeManager->getStore();
         }
-        if (isset($services['state']) && $services['state'] instanceof \Sapient\AccessWorldpay\Model\Checkout\Hpp\State) {
+        if (isset($services['state'])
+            && $services['state'] instanceof \Sapient\AccessWorldpay\Model\Checkout\Hpp\State) {
             $this->state = $services['state'];
         } else {
             $this->state = $hppstate;
@@ -58,6 +62,11 @@ class Factory
     }
 
     /**
+     * Create method
+     *
+     * @param string $javascriptObjectVariable
+     * @param int|string $containerId
+     *
      * @return Sapient\AccessWorldpay\Model\Checkout\Hpp\Json\Config
      */
     public function create($javascriptObjectVariable, $containerId)
@@ -96,6 +105,11 @@ class Factory
         );
     }
 
+    /**
+     * Get CountryForQuote
+     *
+     * @param string $quote
+     */
     private function _getCountryForQuote($quote)
     {
         $address = $quote->getBillingAddress();
@@ -106,6 +120,9 @@ class Factory
         return $this->worldpayhelper->getDefaultCountry();
     }
 
+    /**
+     * Get LanguageForLocale
+     */
     private function _getLanguageForLocale()
     {
         $locale = $this->worldpayhelper->getLocaleDefault();
@@ -115,6 +132,11 @@ class Factory
         return substr($locale, 0, 2);
     }
 
+    /**
+     * Get ExtractOrderId
+     *
+     * @param string $orderKey
+     */
     private static function _extractOrderId($orderKey)
     {
         $array = explode('^', $orderKey);

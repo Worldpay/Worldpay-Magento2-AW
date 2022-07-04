@@ -28,8 +28,9 @@ class Pay extends \Magento\Framework\App\Action\Action
      *
      * @param Context $context
      * @param PageFactory $pageFactory
-     * @param \Sapient\AccessWorldpay\Model\Checkout\Hpp\State
-     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger
+     * @param \Sapient\AccessWorldpay\Model\Checkout\Hpp\State $hppstate
+     * @param \Sapient\AccessWorldpay\Helper\Data $worldpayhelper
+     * @param \Sapient\AccessWorldpay\Logger\AccessWorldpayLogger $wplogger
      */
     public function __construct(
         Context $context,
@@ -44,16 +45,23 @@ class Pay extends \Magento\Framework\App\Action\Action
         $this->worldpayhelper = $worldpayhelper;
         return parent::__construct($context);
     }
- 
+    
+    /**
+     * Execute
+     */
     public function execute()
     {
 
         if (!$this->_getStatus()->isInitialised() || !$this->worldpayhelper->isIframeIntegration()) {
             return $this->resultRedirectFactory->create()->setPath('checkout/cart', ['_current' => true]);
         }
+        $this->getResponse()->setNoCacheHeaders();
         return $this->pageFactory->create();
     }
 
+    /**
+     * Get Status
+     */
     protected function _getStatus()
     {
         if ($this->_status === null) {

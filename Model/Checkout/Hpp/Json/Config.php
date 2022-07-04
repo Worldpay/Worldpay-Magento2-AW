@@ -9,7 +9,7 @@ use Exception;
 
 class Config
 {
-    const TYPE_IFRAME = 'iframe';
+    public const TYPE_IFRAME = 'iframe';
 
     /** @var string $type Indicates whether you are using an iframe or lightbox integration. */
     private $type;
@@ -44,10 +44,27 @@ class Config
     /** @var string $country The default country setting for the payment pages. */
     private $country;
 
+    /** @var string $preferredPaymentMethod */
     private $preferredPaymentMethod;
 
+    /** @var string $urlConfig */
     private $urlConfig;
 
+    /**
+     * Constructor
+     *
+     * @param string $type
+     * @param string|int $iframeIntegrationID
+     * @param string $iframeHelperURL
+     * @param string $iframeBaseURL
+     * @param string $url
+     * @param string $target
+     * @param string $urlConfig
+     * @param string $language
+     * @param string $country
+     * @param string|null $preferredPaymentMethod
+     * @param string|bool $debug
+     */
     public function __construct(
         $type,
         $iframeIntegrationID,
@@ -102,6 +119,8 @@ class Config
     }
 
     /**
+     * Get type
+     *
      * @return string
      */
     public function getType()
@@ -110,6 +129,8 @@ class Config
     }
 
     /**
+     * Get IframeIntegrationID
+     *
      * @return string
      */
     public function getIframeIntegrationID()
@@ -118,6 +139,8 @@ class Config
     }
 
     /**
+     * Get IframeHelperURL
+     *
      * @return string
      */
     public function getIframeHelperURL()
@@ -126,6 +149,8 @@ class Config
     }
 
     /**
+     * Get IframeBaseURL
+     *
      * @return string
      */
     public function getIframeBaseURL()
@@ -134,6 +159,8 @@ class Config
     }
 
     /**
+     * Get Url
+     *
      * @return string
      */
     public function getUrl()
@@ -142,6 +169,8 @@ class Config
     }
 
     /**
+     * Get target
+     *
      * @return string
      */
     public function getTarget()
@@ -150,6 +179,8 @@ class Config
     }
 
     /**
+     * Get Debug
+     *
      * @return boolean
      */
     public function isDebug()
@@ -158,6 +189,8 @@ class Config
     }
 
     /**
+     * Get Language
+     *
      * @return string
      */
     public function getLanguage()
@@ -166,6 +199,8 @@ class Config
     }
 
     /**
+     * Get Country
+     *
      * @return string
      */
     public function getCountry()
@@ -173,12 +208,19 @@ class Config
         return $this->country;
     }
     
+    /**
+     * Get Country
+     *
+     * @return string
+     */
     public function getUrlConfig()
     {
         return $this->urlConfig;
     }
 
     /**
+     * Get PreferredPaymentMethod
+     *
      * @return string
      */
     public function getPreferredPaymentMethod()

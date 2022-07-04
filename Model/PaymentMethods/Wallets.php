@@ -14,9 +14,29 @@ class Wallets extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractMetho
      * @var string
      */
     protected $_code = 'worldpay_wallets';
+
+    /**
+     * Enable the gateway
+     * @var bool
+     */
     protected $_isGateway = true;
+
+    /**
+     * Use the authorization
+     * @var bool
+     */
     protected $_canAuthorize = true;
+
+     /**
+      * Disabled internal use
+      * @var bool
+      */
     protected $_canUseInternal = false;
+
+    /**
+     * Disabled checkout use
+     * @var bool
+     */
     protected $_canUseCheckout = true;
 
     /**
@@ -32,14 +52,21 @@ class Wallets extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractMetho
         parent::authorize($payment, $amount);
         return $this;
     }
-
+    /**
+     * Authorisation service abstract method
+     *
+     * @param int $storeId
+     * @return bool
+     */
     public function getAuthorisationService($storeId)
     {
         return $this->walletService;
     }
 
     /**
-     * check if Wallets is enabled
+     * Check if wallet is enabled
+     *
+     * @param string|null $quote
      * @return bool
      */
     public function isAvailable(\Magento\Quote\Api\Data\CartInterface $quote = null)
@@ -49,9 +76,23 @@ class Wallets extends \Sapient\AccessWorldpay\Model\PaymentMethods\AbstractMetho
         }
         return false;
     }
-
+    /**
+     * Get payment title
+     *
+     * @return string
+     */
     public function getTitle()
     {
-        return $this->worlpayhelper->getWalletsTitle();
+        if ($order = $this->registry->registry('current_order')) {
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } elseif ($invoice = $this->registry->registry('current_invoice')) {
+            $order = $this->worlpayhelper->getOrderByOrderId($invoice->getOrderId());
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } elseif ($creditMemo = $this->registry->registry('current_creditmemo')) {
+            $order = $this->worlpayhelper->getOrderByOrderId($creditMemo->getOrderId());
+            return $this->worlpayhelper->getPaymentTitleForOrders($order, $this->_code, $this->worldpaypayment);
+        } else {
+            return $this->worlpayhelper->getWalletsTitle();
+        }
     }
 }

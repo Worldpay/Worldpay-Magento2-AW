@@ -443,7 +443,8 @@ define(
                         'isSavedCardPayment': this.isSavedCardPayment,
                         'save_my_card': $('#' + this.getCode() + '_save_card').is(":checked"),
                         'disclaimerFlag': this.disclaimerFlag,
-                        'tokenId': this.paymentToken
+                        'tokenId': this.paymentToken,
+                        'collectionReference':window.sessionId
                     }
                 };
             },
@@ -771,7 +772,7 @@ define(
                     width: 450,
                     autoOpen: false,
                     modal: true,
-                    position: 'center',
+                    position: { my: "center", at: "center", of: window },
                     draggable: false,
                     buttons: {
                         Agree: function() { 
