@@ -112,7 +112,7 @@ class CurrentPluginVersion extends \Magento\Framework\App\Config\Value
         
         $packageDetails = $this->composerInformation->getInstalledMagentoPackages();
         if (array_key_exists('sapient/module-access-worldpay', $packageDetails)) {
-            $value['newVersion'] = $packageDetails['version'];
+            $value['newVersion'] = $packageDetails['sapient/module-access-worldpay']['version'];
             if (isset($value['oldVersion']) && ($value['oldVersion']==$value['newVersion'])) {
                 $value['oldVersion'] = "";
             }
