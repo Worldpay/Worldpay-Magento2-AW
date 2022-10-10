@@ -9,11 +9,12 @@ class AccessWorldpayLogger extends \Monolog\Logger
     /**
      *  Add Record
      *
-     * @param string $level
+     * @param int $level
      * @param string $message
      * @param array $context
+     * @param DateTimeImmutable $datetime
      */
-    public function addRecord($level, $message, array $context = []) : bool
+    public function addRecord(int $level, string $message, array $context = [], $datetime = null): bool
     {
         $ObjectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $logEnabled = (bool) $ObjectManager->get(
